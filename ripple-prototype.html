@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ripple Prototype</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      overflow: hidden;
+    }
+    #app {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    #controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-family: system-ui, sans-serif;
+      font-size: 13px;
+      color: #ccc;
+      z-index: 100;
+      min-width: 200px;
+    }
+    #controls h2 {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 0 0 12px 0;
+      color: #888;
+    }
+    #controls .control {
+      margin-bottom: 12px;
+    }
+    #controls label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    #controls .value {
+      font-size: 11px;
+      color: #666;
+      float: right;
+    }
+    #controls input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+    #controls input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #6c5ce7;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .perf {
+      font-size: 11px;
+      color: #666;
+      font-family: monospace;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="controls">
+    <h2>Ripple Prototype</h2>
+    <div class="control">
+      <label>segments <span class="value" id="segments-val">100</span></label>
+      <input type="range" id="segments-slider" min="12" max="360" value="100">
+    </div>
+    <div class="control">
+      <label>expand speed <span class="value" id="expand-val">2.0</span></label>
+      <input type="range" id="expand-slider" min="5" max="100" value="20">
+    </div>
+    <div class="control">
+      <label>line growth <span class="value" id="growth-val">0.5</span></label>
+      <input type="range" id="growth-slider" min="1" max="50" value="5">
+    </div>
+    <div class="control">
+      <label>fade rate <span class="value" id="fade-val">0.5</span></label>
+      <input type="range" id="fade-slider" min="1" max="50" value="5">
+    </div>
+    <div class="perf">
+      <span id="fps-display">-- fps</span> | <span id="segment-count">0 segments</span>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"></script>
+
+  <script>
+    // Settings
+    const settings = {
+      numSegments: 100,
+      expandSpeed: 2.0,
+      lineGrowth: 0.5,
+      fadeRate: 0.5
+    };
+
+    // Colors
+    const palette = [0x6c5ce7, 0x00cec9, 0xfd79a8, 0xffeaa7, 0x55efc4];
+
+    let app;
+    let circles = [];
+    let ripples = [];
+    let circleContainer;
+    let rippleContainer;
+
+    // Initialize PixiJS
+    function init() {
+      app = new PIXI.Application({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: 0x1a1a2e,
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+      });
+      document.getElementById('app').appendChild(app.view);
+
+      // Containers for layering
+      rippleContainer = new PIXI.Container();
+      circleContainer = new PIXI.Container();
+      app.stage.addChild(rippleContainer);
+      app.stage.addChild(circleContainer);
+
+      // Create circles
+      for (let i = 0; i < 4; i++) {
+        circles.push(new Circle(
+          100 + Math.random() * (app.screen.width - 200),
+          100 + Math.random() * (app.screen.height - 200),
+          40 + Math.random() * 30,
+          palette[i % palette.length]
+        ));
+      }
+
+      // Handle resize
+      window.addEventListener('resize', () => {
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+      });
+
+      // Setup controls
+      setupControls();
+
+      // Start game loop
+      app.ticker.add(gameLoop);
+    }
+
+    // Circle class
+    class Circle {
+      constructor(x, y, radius, color) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.color = color;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 0.5;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+
+        this.graphics = new PIXI.Graphics();
+        circleContainer.addChild(this.graphics);
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Wall collision
+        if (this.x - this.radius < 0) {
+          this.x = this.radius;
+          this.vx *= -1;
+        } else if (this.x + this.radius > app.screen.width) {
+          this.x = app.screen.width - this.radius;
+          this.vx *= -1;
+        }
+        if (this.y - this.radius < 0) {
+          this.y = this.radius;
+          this.vy *= -1;
+        } else if (this.y + this.radius > app.screen.height) {
+          this.y = app.screen.height - this.radius;
+          this.vy *= -1;
+        }
+      }
+
+      checkCollision(other) {
+        const dx = other.x - this.x;
+        const dy = other.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = this.radius + other.radius;
+
+        if (dist < minDist && dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const dvx = this.vx - other.vx;
+          const dvy = this.vy - other.vy;
+          const dvn = dvx * nx + dvy * ny;
+
+          if (dvn > 0) {
+            this.vx -= dvn * nx;
+            this.vy -= dvn * ny;
+            other.vx += dvn * nx;
+            other.vy += dvn * ny;
+
+            const overlap = (minDist - dist) / 2;
+            this.x -= overlap * nx;
+            this.y -= overlap * ny;
+            other.x += overlap * nx;
+            other.y += overlap * ny;
+
+            // Create ripple for each circle, centered at their centers with their radii
+            ripples.push(new SegmentRipple(this.x, this.y, this.radius, this.color));
+            ripples.push(new SegmentRipple(other.x, other.y, other.radius, other.color));
+          }
+        }
+      }
+
+      draw() {
+        this.graphics.clear();
+        this.graphics.beginFill(this.color, 0.6);
+        this.graphics.drawCircle(this.x, this.y, this.radius);
+        this.graphics.endFill();
+        this.graphics.lineStyle(2, this.color, 0.9);
+        this.graphics.drawCircle(this.x, this.y, this.radius);
+      }
+    }
+
+    // Segment class - a single line segment in a ripple
+    class Segment {
+      constructor(centerX, centerY, angle, initialRadius, color) {
+        this.angle = angle;   // Direction it's facing AND moving
+        this.color = color;
+        this.length = 2;      // Initial length
+        this.opacity = 1;
+
+        // Start at the circumference (initialRadius distance from center)
+        this.x = centerX + Math.cos(angle) * initialRadius;
+        this.y = centerY + Math.sin(angle) * initialRadius;
+
+        // Velocity based on angle (moves outward)
+        this.speed = settings.expandSpeed;
+        this.vx = Math.cos(angle) * this.speed;
+        this.vy = Math.sin(angle) * this.speed;
+      }
+
+      update() {
+        // Move outward
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Wall collision - reflect and update angle
+        if (this.x < 0) {
+          this.x = 0;
+          this.vx *= -1;
+          this.angle = Math.atan2(this.vy, this.vx);
+        } else if (this.x > app.screen.width) {
+          this.x = app.screen.width;
+          this.vx *= -1;
+          this.angle = Math.atan2(this.vy, this.vx);
+        }
+
+        if (this.y < 0) {
+          this.y = 0;
+          this.vy *= -1;
+          this.angle = Math.atan2(this.vy, this.vx);
+        } else if (this.y > app.screen.height) {
+          this.y = app.screen.height;
+          this.vy *= -1;
+          this.angle = Math.atan2(this.vy, this.vx);
+        }
+
+        // Circle collision - reflect off balls
+        for (const circle of circles) {
+          const dx = this.x - circle.x;
+          const dy = this.y - circle.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < circle.radius && dist > 0) {
+            // Normal pointing outward from circle center
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            // Push segment out to circle surface
+            this.x = circle.x + nx * circle.radius;
+            this.y = circle.y + ny * circle.radius;
+
+            // Reflect velocity: v' = v - 2(v·n)n
+            const dot = this.vx * nx + this.vy * ny;
+            this.vx -= 2 * dot * nx;
+            this.vy -= 2 * dot * ny;
+
+            // Update angle to match new direction
+            this.angle = Math.atan2(this.vy, this.vx);
+          }
+        }
+
+        // Grow length
+        this.length += settings.lineGrowth;
+
+        // Fade out
+        this.opacity -= settings.fadeRate * 0.01;
+      }
+
+      isDead() {
+        return this.opacity <= 0;
+      }
+    }
+
+    // SegmentRipple class - a collection of segments
+    class SegmentRipple {
+      constructor(centerX, centerY, initialRadius, color) {
+        this.segments = [];
+        this.graphics = new PIXI.Graphics();
+        rippleContainer.addChild(this.graphics);
+
+        // Create segments in a circle, starting at the circumference
+        const numSegments = settings.numSegments;
+        for (let i = 0; i < numSegments; i++) {
+          const angle = (i / numSegments) * Math.PI * 2;
+          this.segments.push(new Segment(centerX, centerY, angle, initialRadius, color));
+        }
+      }
+
+      update() {
+        for (const seg of this.segments) {
+          seg.update();
+        }
+        // Remove dead segments
+        this.segments = this.segments.filter(s => !s.isDead());
+      }
+
+      isDead() {
+        return this.segments.length === 0;
+      }
+
+      draw() {
+        this.graphics.clear();
+
+        for (const seg of this.segments) {
+          if (seg.opacity <= 0) continue;
+
+          // Calculate line endpoints from center
+          const halfLen = seg.length / 2;
+          const perpAngle = seg.angle + Math.PI / 2; // Perpendicular to movement
+          const x1 = seg.x + Math.cos(perpAngle) * halfLen;
+          const y1 = seg.y + Math.sin(perpAngle) * halfLen;
+          const x2 = seg.x - Math.cos(perpAngle) * halfLen;
+          const y2 = seg.y - Math.sin(perpAngle) * halfLen;
+
+          this.graphics.lineStyle(1.5, seg.color, seg.opacity);
+          this.graphics.moveTo(x1, y1);
+          this.graphics.lineTo(x2, y2);
+        }
+      }
+
+      destroy() {
+        rippleContainer.removeChild(this.graphics);
+        this.graphics.destroy();
+      }
+
+      getSegmentCount() {
+        return this.segments.length;
+      }
+    }
+
+    function gameLoop() {
+      // Update circles
+      for (const c of circles) {
+        c.update();
+      }
+
+      // Check collisions
+      for (let i = 0; i < circles.length; i++) {
+        for (let j = i + 1; j < circles.length; j++) {
+          circles[i].checkCollision(circles[j]);
+        }
+      }
+
+      // Update and draw ripples
+      let totalSegments = 0;
+      for (const ripple of ripples) {
+        ripple.update();
+        ripple.draw();
+        totalSegments += ripple.getSegmentCount();
+      }
+
+      // Remove dead ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        if (ripples[i].isDead()) {
+          ripples[i].destroy();
+          ripples.splice(i, 1);
+        }
+      }
+
+      // Draw circles
+      for (const c of circles) {
+        c.draw();
+      }
+
+      // Update stats
+      document.getElementById('fps-display').textContent = Math.round(app.ticker.FPS) + ' fps';
+      document.getElementById('segment-count').textContent = totalSegments + ' segments';
+    }
+
+    function setupControls() {
+      document.getElementById('segments-slider').addEventListener('input', (e) => {
+        settings.numSegments = parseInt(e.target.value);
+        document.getElementById('segments-val').textContent = settings.numSegments;
+      });
+
+      document.getElementById('expand-slider').addEventListener('input', (e) => {
+        settings.expandSpeed = parseInt(e.target.value) / 10;
+        document.getElementById('expand-val').textContent = settings.expandSpeed.toFixed(1);
+      });
+
+      document.getElementById('growth-slider').addEventListener('input', (e) => {
+        settings.lineGrowth = parseInt(e.target.value) / 10;
+        document.getElementById('growth-val').textContent = settings.lineGrowth.toFixed(1);
+      });
+
+      document.getElementById('fade-slider').addEventListener('input', (e) => {
+        settings.fadeRate = parseInt(e.target.value) / 10;
+        document.getElementById('fade-val').textContent = settings.fadeRate.toFixed(1);
+      });
+    }
+
+    // Start
+    init();
+  </script>
+</body>
+</html>

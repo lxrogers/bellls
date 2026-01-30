@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generative Sound Bath</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #f5f0e8;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    #app {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    #start-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(245, 240, 232, 0.97);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      cursor: pointer;
+    }
+    #start-overlay h1 {
+      color: #3a3632;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-weight: 400;
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      letter-spacing: 0.15em;
+    }
+    #start-overlay p {
+      color: #7a756d;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+    #admin-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(4px);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 0.8rem;
+      color: #5a554d;
+      z-index: 100;
+      min-width: 180px;
+      display: none;
+    }
+    #admin-panel h2 {
+      font-size: 0.7rem;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin: 0 0 12px 0;
+      color: #7a756d;
+    }
+    #admin-panel .control {
+      margin-bottom: 12px;
+    }
+    #admin-panel .control:last-child {
+      margin-bottom: 0;
+    }
+    #admin-panel label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.75rem;
+    }
+    #admin-panel input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+    #admin-panel input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #8b7355;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #admin-panel input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: #8b7355;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+    #admin-panel .value {
+      font-size: 0.7rem;
+      color: #9a958d;
+      float: right;
+    }
+    #admin-panel select {
+      width: 100%;
+      padding: 4px 6px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 0.75rem;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.5);
+      color: #5a554d;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    #admin-panel .perf {
+      font-size: 0.65rem;
+      color: #9a958d;
+      font-family: monospace;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="admin-panel">
+    <h2>controls</h2>
+    <div class="control">
+      <label>circles <span class="value" id="circles-val">6</span></label>
+      <input type="range" id="circles-slider" min="2" max="200" value="6">
+    </div>
+    <div class="control">
+      <label>instrument</label>
+      <select id="instrument-select">
+        <option value="vibraphone">Vibraphone</option>
+        <option value="kalimba-kenya">Kalimba (Kenya)</option>
+        <option value="kalimba-tanzania">Kalimba (Tanzania)</option>
+      </select>
+    </div>
+    <div class="control">
+      <label>scale</label>
+      <select id="scale-select">
+        <option value="pentatonic-d">D Major Pentatonic</option>
+        <option value="pentatonic-a-minor">A Minor Pentatonic</option>
+        <option value="whole-tone">Whole Tone</option>
+        <option value="dorian">D Dorian</option>
+        <option value="miyako-bushi">Japanese (In Sen)</option>
+      </select>
+    </div>
+    <div class="control">
+      <label>volume <span class="value" id="volume-val">70%</span></label>
+      <input type="range" id="volume-slider" min="0" max="100" value="70">
+    </div>
+    <div class="control">
+      <label>room size <span class="value" id="room-val">50%</span></label>
+      <input type="range" id="room-slider" min="0" max="100" value="50">
+    </div>
+    <div class="control">
+      <label>velocity <span class="value" id="velocity-val">0.20</span></label>
+      <input type="range" id="velocity-slider" min="5" max="400" value="20">
+    </div>
+    <div class="control">
+      <label>radius mult <span class="value" id="radius-val">1.50</span></label>
+      <input type="range" id="radius-slider" min="50" max="200" value="150">
+    </div>
+    <div class="control">
+      <label>ripple expand <span class="value" id="ripple-expand-val">0.9</span></label>
+      <input type="range" id="ripple-expand-slider" min="1" max="100" value="9">
+    </div>
+    <div class="control">
+      <label>ripple fade <span class="value" id="ripple-fade-val">0.1</span></label>
+      <input type="range" id="ripple-fade-slider" min="1" max="50" value="1">
+    </div>
+    <div class="control">
+      <label>dust count <span class="value" id="dust-count-val">50</span></label>
+      <input type="range" id="dust-count-slider" min="0" max="500" value="50">
+    </div>
+    <div class="control">
+      <label>dust velocity <span class="value" id="dust-vel-val">0.20</span></label>
+      <input type="range" id="dust-vel-slider" min="0" max="100" value="20">
+    </div>
+    <div class="control">
+      <label>dust power <span class="value" id="dust-power-val">0.0140</span></label>
+      <input type="range" id="dust-power-slider" min="1" max="500" value="140">
+    </div>
+    <div class="control">
+      <label>dust range <span class="value" id="dust-range-val">75</span></label>
+      <input type="range" id="dust-range-slider" min="1" max="100" value="75">
+    </div>
+    <div class="control">
+      <label>dust buffer <span class="value" id="dust-buffer-val">15</span></label>
+      <input type="range" id="dust-buffer-slider" min="0" max="30" value="15">
+    </div>
+    <div class="control">
+      <label>dust decay <span class="value" id="dust-decay-val">0.95</span></label>
+      <input type="range" id="dust-decay-slider" min="80" max="99" value="95">
+    </div>
+    <div class="control">
+      <label>field strength <span class="value" id="field-strength-val">0.0008</span></label>
+      <input type="range" id="field-strength-slider" min="1" max="100" value="8">
+    </div>
+    <div class="control">
+      <label>field scale <span class="value" id="field-scale-val">0.005</span></label>
+      <input type="range" id="field-scale-slider" min="1" max="50" value="5">
+    </div>
+    <div class="control perf">
+      <span id="fps-display">-- fps</span>
+    </div>
+  </div>
+
+  <div id="start-overlay">
+    <h1>sound bath</h1>
+    <p>click anywhere to begin</p>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"></script>
+
+  <script type="module">
+    // Settings
+    const settings = {
+      numCircles: 6,
+      volume: 70,
+      roomSize: 50,
+      baseVelocity: 0.2,
+      radiusMultiplier: 1.5,
+      rippleExpand: 0.9,
+      rippleFade: 0.1,
+      dustCount: 50,
+      dustVelocity: 0.2,
+      dustFlowPower: 0.014,
+      dustFlowRange: 75,
+      dustCollisionBuffer: 15,
+      dustNudgeDecay: 0.95,
+      dustFieldStrength: 0.0008,
+      dustFieldScale: 0.005
+    };
+
+    // Palette (blended equivalents at full opacity)
+    const palette = [
+      0xe3d2b6,  // warm ochre blended
+      0xcbbead,  // warm brown blended
+      0xd3b19d,  // sienna blended
+      0xe5c5a4,  // peru blended
+      0xe7ba97,  // chocolate blended
+      0xddc68f,  // dark goldenrod blended
+    ];
+
+    // Audio setup
+    let audioReady = false;
+    let instrumentsLoaded = 0;
+    const totalInstruments = 3;
+    const VOICE_POOL_SIZE = 12;
+    let voicePools = {};
+    let voiceIndices = {};
+    let currentInstrument = 'vibraphone';
+    let reverb, convolver, delay, compressor, limiter;
+
+    const scales = {
+      'pentatonic-d': {
+        name: 'D Major Pentatonic',
+        notes: ['D2', 'F#2', 'A2', 'B2', 'D3', 'E3', 'F#3', 'A3', 'B3', 'D4', 'E4', 'F#4', 'A4', 'B4', 'D5']
+      },
+      'pentatonic-a-minor': {
+        name: 'A Minor Pentatonic',
+        notes: ['A2', 'C3', 'D3', 'E3', 'G3', 'A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5', 'G5']
+      },
+      'whole-tone': {
+        name: 'Whole Tone',
+        notes: ['C2', 'D2', 'E2', 'F#2', 'G#2', 'A#2', 'C3', 'D3', 'E3', 'F#3', 'G#3', 'A#3', 'C4', 'D4', 'E4']
+      },
+      'dorian': {
+        name: 'D Dorian',
+        notes: ['D2', 'E2', 'F2', 'G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4']
+      },
+      'miyako-bushi': {
+        name: 'Japanese (In Sen)',
+        notes: ['D2', 'Eb2', 'G2', 'A2', 'C3', 'D3', 'Eb3', 'G3', 'A3', 'C4', 'D4', 'Eb4', 'G4', 'A4', 'C5']
+      }
+    };
+    let currentScale = 'pentatonic-d';
+
+    async function initAudio() {
+      await Tone.start();
+      Tone.context.lookAhead = 0.01;
+
+      limiter = new Tone.Limiter(-1).toDestination();
+      compressor = new Tone.Compressor({
+        threshold: -24, ratio: 4, attack: 0.003, release: 0.25, knee: 6
+      }).connect(limiter);
+
+      convolver = new Tone.Convolver({ wet: 0.45 }).connect(compressor);
+      const irLength = 4 * Tone.context.sampleRate;
+      const irBuffer = Tone.context.createBuffer(2, irLength, Tone.context.sampleRate);
+      for (let channel = 0; channel < 2; channel++) {
+        const channelData = irBuffer.getChannelData(channel);
+        for (let i = 0; i < irLength; i++) {
+          channelData[i] = (Math.random() * 2 - 1) * Math.exp(-3 * i / irLength);
+        }
+      }
+      convolver.buffer = irBuffer;
+
+      reverb = new Tone.Reverb({ decay: 6.5, wet: 0.45, preDelay: 0.055 }).connect(convolver);
+      delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.25, wet: 0.15 }).connect(reverb);
+
+      const instrumentConfigs = {
+        vibraphone: {
+          urls: {
+            'F2': 'Vibes_soft_F2_v1_rr1_Main.wav',
+            'A2': 'Vibes_soft_A2_v1_rr1_Main.wav',
+            'C3': 'Vibes_soft_C3_v1_rr2_Main.wav',
+            'E3': 'Vibes_soft_E3_v1_rr2_Main.wav',
+            'G3': 'Vibes_soft_G3_v1_rr1_Main.wav',
+            'B3': 'Vibes_soft_B3_v1_rr1_Main.wav',
+            'D4': 'Vibes_soft_D4_v1_rr1_Main.wav',
+            'F4': 'Vibes_soft_F4_v1_rr1_Main.wav',
+            'A4': 'Vibes_soft_A4_v1_rr1_Main.wav',
+            'C5': 'Vibes_soft_C5_v1_rr1_Main.wav',
+            'E5': 'Vibes_soft_E5_v1_rr1_Main.wav',
+          },
+          baseUrl: 'samples/'
+        },
+        'kalimba-kenya': {
+          urls: {
+            'B2': 'Mbira6_Normal_MainSpirit_B2_k8_vl3_rr2.wav',
+            'C#3': 'Mbira6_Normal_MainSpirit_C#3_k7_vl3_rr2.wav',
+            'D#3': 'Mbira6_Normal_MainSpirit_D#3_k6_vl3_rr2.wav',
+            'F#3': 'Mbira6_Normal_MainSpirit_F#3_k10_vl3_rr2.wav',
+            'G#3': 'Mbira6_Normal_MainSpirit_G#3_k4_vl3_rr2.wav',
+            'B3': 'Mbira6_Normal_MainSpirit_B3_k3_vl3_rr2.wav',
+            'C#4': 'Mbira6_Normal_MainSpirit_C#4_k2_vl3_rr2.wav',
+            'D#4': 'Mbira6_Normal_MainSpirit_D#4_k13_vl3_rr2.wav',
+            'F#4': 'Mbira6_Normal_MainSpirit_F#4_k14_vl3_rr2.wav',
+            'A4': 'Mbira6_Normal_MainSpirit_A4_k1_vl3_rr2.wav',
+            'B4': 'Mbira6_Normal_MainSpirit_B4_k15_vl3_rr2.wav',
+          },
+          baseUrl: 'kalimba-kenya/'
+        },
+        'kalimba-tanzania': {
+          urls: {
+            'G1': 'MBira3_pluck_Main_G1_k12_50_100_rr2.wav',
+            'G#1': 'MBira3_pluck_Main_G#1_k11_50_100_rr2.wav',
+            'B1': 'MBira3_pluck_Main_B1_k13_50_100_rr2.wav',
+            'C#2': 'MBira3_pluck_Main_C#2_k10_50_100_rr2.wav',
+            'D#2': 'MBira3_pluck_Main_D#2_k14_50_100_rr2.wav',
+            'F2': 'MBira3_pluck_Main_F2_k9alt_50_100_rr2.wav',
+            'G2': 'MBira3_pluck_Main_G2_k15_50_100_rr2.wav',
+            'A#2': 'MBira3_pluck_Main_A#2_k8_50_100_rr2.wav',
+            'C#3': 'MBira3_pluck_Main_C#3_k16_50_100_rr2.wav',
+            'D#3': 'MBira3_pluck_Main_D#3_k7_50_100_rr2.wav',
+            'F3': 'MBira3_pluck_Main_F3_k17_50_100_rr2.wav',
+            'G3': 'MBira3_pluck_Main_G3_k6_50_100_rr2.wav',
+            'A#3': 'MBira3_pluck_Main_A#3_k18_50_100_rr2.wav',
+            'C#4': 'MBira3_pluck_Main_C#4_k5_50_100_rr2.wav',
+            'D#4': 'MBira3_pluck_Main_D#4_k4_50_100_rr2.wav',
+            'F4': 'MBira3_pluck_Main_F4_k21_50_100_rr2.wav',
+            'G4': 'MBira3_pluck_Main_G4_k22_50_100_rr2.wav',
+            'A#4': 'MBira3_pluck_Main_A#4_k2_50_100_rr2.wav',
+            'B4': 'MBira3_pluck_Main_B4_k23_50_100_rr2.wav',
+            'C#5': 'MBira3_pluck_Main_C#5_k24_50_100_rr2.wav',
+            'E5': 'MBira3_pluck_Main_E5_k25_50_100_rr2.wav',
+          },
+          baseUrl: 'kalimba-tanzania/'
+        }
+      };
+
+      for (const [instName, config] of Object.entries(instrumentConfigs)) {
+        voicePools[instName] = [];
+        voiceIndices[instName] = 0;
+
+        for (let i = 0; i < VOICE_POOL_SIZE; i++) {
+          const panner = new Tone.Panner(0).connect(delay);
+          const sampler = new Tone.Sampler({
+            urls: config.urls,
+            baseUrl: config.baseUrl,
+            release: 4,
+            onload: () => {
+              if (i === 0) {
+                console.log(`${instName} loaded`);
+                instrumentsLoaded++;
+                if (instrumentsLoaded >= totalInstruments) audioReady = true;
+              }
+            }
+          }).connect(panner);
+          voicePools[instName].push({ sampler, panner });
+        }
+      }
+
+      const vol = -6 + (settings.volume / 100) * 18;
+      for (const pool of Object.values(voicePools)) {
+        for (const voice of pool) {
+          voice.sampler.volume.value = vol;
+        }
+      }
+    }
+
+    function playNote(noteIndex, velocity = 0.5, xPosition = 0.5) {
+      if (!audioReady) return;
+      const pool = voicePools[currentInstrument];
+      if (!pool || pool.length === 0) return;
+
+      const voiceIndex = voiceIndices[currentInstrument];
+      const voice = pool[voiceIndex];
+      voiceIndices[currentInstrument] = (voiceIndex + 1) % pool.length;
+
+      voice.panner.pan.value = (xPosition * 2) - 1;
+      const scaleNotes = scales[currentScale].notes;
+      const note = scaleNotes[noteIndex % scaleNotes.length];
+      const duration = 2 + Math.random() * 2;
+      voice.sampler.triggerAttackRelease(note, duration, undefined, velocity);
+    }
+
+    let roomSizeTimeout = null;
+    function updateRoomSize() {
+      if (roomSizeTimeout) clearTimeout(roomSizeTimeout);
+      roomSizeTimeout = setTimeout(async () => {
+        if (!reverb || !convolver || !audioReady) return;
+        const size = settings.roomSize / 100;
+        try {
+          if (convolver.wet) convolver.wet.value = 0.1 + size * 0.7;
+          if (reverb.wet) reverb.wet.value = 0.2 + size * 0.6;
+          const irLength = Math.floor((1 + size * 6) * Tone.context.sampleRate);
+          const irBuffer = Tone.context.createBuffer(2, irLength, Tone.context.sampleRate);
+          for (let channel = 0; channel < 2; channel++) {
+            const channelData = irBuffer.getChannelData(channel);
+            for (let i = 0; i < irLength; i++) {
+              const decayRate = 2 + (1 - size) * 4;
+              channelData[i] = (Math.random() * 2 - 1) * Math.exp(-decayRate * i / irLength);
+            }
+          }
+          convolver.buffer = irBuffer;
+          reverb.decay = 1 + size * 10;
+          reverb.preDelay = 0.01 + size * 0.09;
+          await reverb.generate();
+        } catch (err) {
+          console.warn('Room size update error:', err);
+        }
+      }, 150);
+    }
+
+    // PixiJS Application
+    let app;
+    let circles = [];
+    let ripples = [];
+    let dustParticles = [];
+    let circleContainer;
+    let rippleContainer;
+    let dustContainer;
+    let started = false;
+
+    // Camera / follow mode
+    let followedCircle = null;
+    let cameraX = 0;
+    let cameraY = 0;
+    let targetCameraX = 0;
+    let targetCameraY = 0;
+    let cameraZoom = 1;
+    let targetCameraZoom = 1;
+    let gridOpacity = 0;
+    let targetGridOpacity = 0;
+    const cameraSmoothing = 0.05; // How fast camera catches up (0-1)
+    const followZoom = 1.8; // Zoom level when following
+    const gridSpacing = 40; // Diamond grid spacing
+
+    // Simple noise function for flow field
+    let flowTime = 0;
+    function flowNoise(x, y, t) {
+      // Combine multiple sine waves for organic noise-like behavior
+      const scale = settings.dustFieldScale;
+      const angle =
+        Math.sin(x * scale + t * 0.3) * 2 +
+        Math.cos(y * scale * 1.3 + t * 0.2) * 2 +
+        Math.sin((x + y) * scale * 0.7 + t * 0.4) +
+        Math.cos((x - y) * scale * 0.5 + t * 0.25);
+      return angle;
+    }
+
+    // Dust particle class
+    class DustParticle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        // Small random initial velocity
+        this.vx = (Math.random() - 0.5) * settings.dustVelocity;
+        this.vy = (Math.random() - 0.5) * settings.dustVelocity;
+        // Nudge (acceleration) - decays over time
+        this.nudgeX = 0;
+        this.nudgeY = 0;
+
+        this.size = 1.5 + Math.random() * 1.5;
+        this.opacity = 1;
+
+        this.graphics = new PIXI.Graphics();
+        dustContainer.addChild(this.graphics);
+      }
+
+      applyFlowField() {
+        // Get flow angle at this position
+        const angle = flowNoise(this.x, this.y, flowTime);
+
+        // Apply force in flow direction
+        this.vx += Math.cos(angle) * settings.dustFieldStrength;
+        this.vy += Math.sin(angle) * settings.dustFieldStrength;
+      }
+
+      update() {
+        // Apply nudge to velocity
+        this.vx += this.nudgeX;
+        this.vy += this.nudgeY;
+
+        // Decay nudge
+        this.nudgeX *= settings.dustNudgeDecay;
+        this.nudgeY *= settings.dustNudgeDecay;
+
+        // Apply slight drag to velocity
+        this.vx *= 0.995;
+        this.vy *= 0.995;
+
+        // Update position
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Wall bounce
+        if (this.x < 0) { this.x = 0; this.vx *= -0.5; }
+        if (this.x > app.screen.width) { this.x = app.screen.width; this.vx *= -0.5; }
+        if (this.y < 0) { this.y = 0; this.vy *= -0.5; }
+        if (this.y > app.screen.height) { this.y = app.screen.height; this.vy *= -0.5; }
+      }
+
+      checkCircleFlow(circle) {
+        const dx = this.x - circle.x;
+        const dy = this.y - circle.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Distance from circle edge
+        const edgeDist = dist - circle.r;
+
+        // Only affect particles within range past the circle edge
+        if (edgeDist < 0 || edgeDist > settings.dustFlowRange) return;
+
+        // Circle speed - effect scales with velocity
+        const circleSpeed = Math.sqrt(circle.vx * circle.vx + circle.vy * circle.vy);
+        if (circleSpeed < 0.001) return;
+
+        // Normalized direction from circle to particle (radius direction)
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Normalized circle velocity
+        const cvx = circle.vx / circleSpeed;
+        const cvy = circle.vy / circleSpeed;
+
+        // How "to the side" the particle is relative to motion direction
+        // alignment: -1 = directly in front, 0 = perpendicular, +1 = directly behind
+        const alignment = nx * cvx + ny * cvy;
+        const sideAmount = 1 - Math.abs(alignment); // 0 at front/back, 1 at sides
+
+        // Tangent direction (perpendicular to radius)
+        const tx1 = -ny;
+        const ty1 = nx;
+
+        // Pick tangent that aligns with circle velocity
+        const dot = tx1 * circle.vx + ty1 * circle.vy;
+        const sign = dot >= 0 ? -1 : 1;
+
+        const tx = tx1 * sign;
+        const ty = ty1 * sign;
+
+        // Inward direction (toward circle center)
+        const inwardX = -nx;
+        const inwardY = -ny;
+
+        // Blend tangent with inward - more inward as particle gets to the sides
+        const inwardBias = sideAmount * 0.8; // 0 at front, up to 0.8 at sides
+        const forceX = tx * (1 - inwardBias) + inwardX * inwardBias;
+        const forceY = ty * (1 - inwardBias) + inwardY * inwardBias;
+
+        // Normalize
+        const forceMag = Math.sqrt(forceX * forceX + forceY * forceY);
+        const normForceX = forceX / forceMag;
+        const normForceY = forceY / forceMag;
+
+        // Force falloff: stronger at edge (edgeDist=0), weaker at range
+        const falloff = 1 - (edgeDist / settings.dustFlowRange);
+
+        // Apply force directly to velocity
+        const force = falloff * settings.dustFlowPower * circleSpeed;
+        this.vx += normForceX * force;
+        this.vy += normForceY * force;
+      }
+
+      checkCircleCollision(circle) {
+        const dx = this.x - circle.x;
+        const dy = this.y - circle.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Velocity-based buffer: scales with circle speed up to max
+        const circleSpeed = Math.sqrt(circle.vx * circle.vx + circle.vy * circle.vy);
+        const buffer = Math.min(settings.dustCollisionBuffer, circleSpeed * 50);
+
+        const minDist = circle.r + this.size + buffer;
+
+        // If inside the barrier, push to the edge
+        if (dist < minDist && dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          this.x = circle.x + nx * minDist;
+          this.y = circle.y + ny * minDist;
+        }
+      }
+
+      draw() {
+        const drawX = this.x - cameraX;
+        const drawY = this.y - cameraY;
+
+        this.graphics.clear();
+        this.graphics.beginFill(0xffffff, this.opacity);
+        this.graphics.drawCircle(drawX, drawY, this.size);
+        this.graphics.endFill();
+      }
+    }
+
+    async function initPixi() {
+      app = new PIXI.Application({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: 0xf5f0e8, // Valid area color
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+        forceCanvas: false, // Set to true if WebGL keeps failing
+      });
+      document.getElementById('app').appendChild(app.view);
+
+      // Create containers for layering
+      const gridContainer = new PIXI.Container();
+      rippleContainer = new PIXI.Container();
+      dustContainer = new PIXI.Container();
+      circleContainer = new PIXI.Container();
+      const boundsOverlay = new PIXI.Container();
+
+      // Grid pattern (for follow mode)
+      const gridGraphics = new PIXI.Graphics();
+      gridContainer.addChild(gridGraphics);
+
+      // Blur the grid for a softer pool-bottom feel
+      const gridBlur = new PIXI.filters.BlurFilter();
+      gridBlur.blur = 2;
+      gridContainer.filters = [gridBlur];
+
+      // Out-of-bounds overlay (drawn on top of everything)
+      const boundsGraphics = new PIXI.Graphics();
+      boundsOverlay.addChild(boundsGraphics);
+
+      // Store for updating in game loop
+      app.gridGraphics = gridGraphics;
+      app.boundsGraphics = boundsGraphics;
+
+      app.stage.addChild(gridContainer);
+      app.stage.addChild(rippleContainer);
+      app.stage.addChild(dustContainer);
+      app.stage.addChild(circleContainer);
+      app.stage.addChild(boundsOverlay); // On top
+
+      // Handle resize
+      window.addEventListener('resize', () => {
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+      });
+
+      // Handle click for follow mode
+      app.view.addEventListener('click', (e) => {
+        if (!started) return;
+
+        const rect = app.view.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left) * (app.screen.width / rect.width) + cameraX;
+        const clickY = (e.clientY - rect.top) * (app.screen.height / rect.height) + cameraY;
+
+        // Check if clicked on a circle
+        let clickedCircle = null;
+        for (const circle of circles) {
+          const dx = circle.x - clickX;
+          const dy = circle.y - clickY;
+          if (Math.sqrt(dx * dx + dy * dy) < circle.r) {
+            clickedCircle = circle;
+            break;
+          }
+        }
+
+        if (clickedCircle) {
+          // Toggle follow - if clicking same circle, stop following
+          if (followedCircle === clickedCircle) {
+            followedCircle = null;
+          } else {
+            followedCircle = clickedCircle;
+          }
+        } else {
+          // Clicked empty space - stop following
+          followedCircle = null;
+        }
+      });
+    }
+
+
+    // Circle class
+    class Circle {
+      constructor(x, y, radius, noteIndex, color) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.noteIndex = noteIndex;
+        this.color = color;
+        this.glow = 0;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = settings.baseVelocity + (Math.random() - 0.5) * settings.baseVelocity * 0.5;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+
+        // Graphics
+        this.graphics = new PIXI.Graphics();
+        circleContainer.addChild(this.graphics);
+      }
+
+      get r() {
+        return this.radius * settings.radiusMultiplier;
+      }
+
+      get mass() {
+        // Mass proportional to area (radius squared)
+        return this.r * this.r;
+      }
+
+      applyFlowField() {
+        // Get flow angle at this position
+        const angle = flowNoise(this.x, this.y, flowTime);
+
+        // Apply force - scaled down by mass so larger circles are less affected
+        const force = settings.dustFieldStrength / (this.mass * 0.5);
+        this.vx += Math.cos(angle) * force;
+        this.vy += Math.sin(angle) * force;
+      }
+
+      update() {
+        this.applyFlowField();
+        this.x += this.vx;
+        this.y += this.vy;
+        this.glow *= 0.92;
+
+        let hitWall = false;
+        const r = this.r;
+
+        if (this.x - r < 0) {
+          this.x = r;
+          this.vx *= -1;
+          hitWall = true;
+        } else if (this.x + r > app.screen.width) {
+          this.x = app.screen.width - r;
+          this.vx *= -1;
+          hitWall = true;
+        }
+
+        if (this.y - r < 0) {
+          this.y = r;
+          this.vy *= -1;
+          hitWall = true;
+        } else if (this.y + r > app.screen.height) {
+          this.y = app.screen.height - r;
+          this.vy *= -1;
+          hitWall = true;
+        }
+
+        if (hitWall) this.triggerSound(0.25);
+      }
+
+      checkCollision(other) {
+        const dx = other.x - this.x;
+        const dy = other.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = this.r + other.r;
+
+        if (dist < minDist && dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const dvx = this.vx - other.vx;
+          const dvy = this.vy - other.vy;
+          const dvn = dvx * nx + dvy * ny;
+
+          if (dvn > 0) {
+            // Mass-weighted elastic collision
+            const m1 = this.mass;
+            const m2 = other.mass;
+            const totalMass = m1 + m2;
+
+            // Impulse coefficients based on mass ratio
+            const c1 = (2 * m2) / totalMass;
+            const c2 = (2 * m1) / totalMass;
+
+            this.vx -= c1 * dvn * nx;
+            this.vy -= c1 * dvn * ny;
+            other.vx += c2 * dvn * nx;
+            other.vy += c2 * dvn * ny;
+
+            const overlap = (minDist - dist) / 2;
+            this.x -= overlap * nx;
+            this.y -= overlap * ny;
+            other.x += overlap * nx;
+            other.y += overlap * ny;
+
+            const vel = Math.min(0.7, Math.abs(dvn) * 0.4 + 0.2);
+            this.triggerSound(vel);
+            other.triggerSound(vel * 0.6);
+            return true;
+          }
+        }
+        return false;
+      }
+
+      triggerSound(velocity) {
+        this.glow = 1;
+        const xNormalized = this.x / app.screen.width;
+        playNote(this.noteIndex, velocity, xNormalized);
+
+        // Create ripple
+        ripples.push(new Ripple(this.x, this.y, this.r));
+      }
+
+      draw() {
+        const r = this.r;
+        const drawX = this.x - cameraX;
+        const drawY = this.y - cameraY;
+
+        this.graphics.clear();
+
+        // Fill (full opacity)
+        this.graphics.beginFill(this.color, 1);
+        this.graphics.drawCircle(drawX, drawY, r * 0.85);
+        this.graphics.endFill();
+
+        // Outline - thicker stroke when struck
+        const strokeWidth = 2 + this.glow * 6;
+        this.graphics.lineStyle(strokeWidth, this.color, 1);
+        this.graphics.drawCircle(drawX, drawY, r);
+
+        // Extra glow ring when struck
+        if (this.glow > 0.1) {
+          this.graphics.lineStyle(this.glow * 4, 0xffffff, this.glow * 0.4);
+          this.graphics.drawCircle(drawX, drawY, r + this.glow * 5);
+        }
+      }
+
+      destroy() {
+        circleContainer.removeChild(this.graphics);
+        this.graphics.destroy();
+      }
+    }
+
+    // Ripple class
+    let rippleIdCounter = 0;
+    class Ripple {
+      constructor(x, y, radius) {
+        this.id = rippleIdCounter++;
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.prevRadius = radius;
+        this.opacity = 0.5;
+
+        this.graphics = new PIXI.Graphics();
+        rippleContainer.addChild(this.graphics);
+      }
+
+      update() {
+        this.prevRadius = this.radius;
+        this.radius += settings.rippleExpand;
+        this.opacity -= settings.rippleFade * 0.01;
+      }
+
+      isDead() {
+        return this.opacity <= 0;
+      }
+
+      draw() {
+        if (this.opacity <= 0) return;
+
+        const drawX = this.x - cameraX;
+        const drawY = this.y - cameraY;
+
+        this.graphics.clear();
+        this.graphics.lineStyle(2, 0xffffff, this.opacity);
+        this.graphics.drawCircle(drawX, drawY, this.radius);
+      }
+
+      destroy() {
+        rippleContainer.removeChild(this.graphics);
+        this.graphics.destroy();
+      }
+    }
+
+    function createDustParticles() {
+      // Remove extra particles
+      while (dustParticles.length > settings.dustCount) {
+        const p = dustParticles.pop();
+        dustContainer.removeChild(p.graphics);
+        p.graphics.destroy();
+      }
+
+      // Add new particles
+      while (dustParticles.length < settings.dustCount) {
+        const x = Math.random() * app.screen.width;
+        const y = Math.random() * app.screen.height;
+        dustParticles.push(new DustParticle(x, y));
+      }
+    }
+
+    function createCircles() {
+      // Remove extra circles
+      while (circles.length > settings.numCircles) {
+        const c = circles.pop();
+        c.destroy();
+      }
+
+      // Add new circles
+      while (circles.length < settings.numCircles) {
+        const i = circles.length;
+
+        // Assign note first - spread across the scale
+        const scaleNotes = scales[currentScale].notes;
+        const noteIndex = Math.floor((i / settings.numCircles) * scaleNotes.length);
+
+        // Radius proportional to note (lower note = larger circle)
+        // noteIndex 0 (lowest) -> largest, noteIndex 14 (highest) -> smallest
+        const noteRatio = noteIndex / (scaleNotes.length - 1); // 0 for low notes, 1 for high
+        const radius = 90 - noteRatio * 55; // Range: 90 (low notes) to 35 (high notes)
+
+        let x, y, attempts = 0;
+        do {
+          x = radius * settings.radiusMultiplier + Math.random() * (app.screen.width - radius * settings.radiusMultiplier * 2);
+          y = radius * settings.radiusMultiplier + Math.random() * (app.screen.height - radius * settings.radiusMultiplier * 2);
+          attempts++;
+        } while (attempts < 50 && circles.some(c => {
+          const dx = c.x - x;
+          const dy = c.y - y;
+          return Math.sqrt(dx * dx + dy * dy) < c.radius + radius + 20;
+        }));
+
+        circles.push(new Circle(x, y, radius, noteIndex, palette[i % palette.length]));
+      }
+    }
+
+    function gameLoop() {
+      if (!started) return;
+
+      // Update camera for follow mode
+      if (followedCircle) {
+        targetCameraX = followedCircle.x - app.screen.width / 2;
+        targetCameraY = followedCircle.y - app.screen.height / 2;
+        targetCameraZoom = followZoom;
+        targetGridOpacity = 0.15;
+      } else {
+        targetCameraX = 0;
+        targetCameraY = 0;
+        targetCameraZoom = 1;
+        targetGridOpacity = 0.11; // Subtle grid in normal mode too
+      }
+
+      // Smooth camera movement, zoom, and grid opacity
+      cameraX += (targetCameraX - cameraX) * cameraSmoothing;
+      cameraY += (targetCameraY - cameraY) * cameraSmoothing;
+      cameraZoom += (targetCameraZoom - cameraZoom) * cameraSmoothing;
+      gridOpacity += (targetGridOpacity - gridOpacity) * cameraSmoothing;
+
+      // Apply zoom to stage
+      app.stage.scale.set(cameraZoom);
+      app.stage.pivot.set(app.screen.width / 2, app.screen.height / 2);
+      app.stage.position.set(app.screen.width / 2, app.screen.height / 2);
+
+      // Draw diamond grid pattern (visible in follow mode)
+      const grid = app.gridGraphics;
+      grid.clear();
+      if (gridOpacity > 0.001) {
+        grid.lineStyle(1, 0x8b7355, gridOpacity);
+        const w = app.screen.width;
+        const h = app.screen.height;
+        const s = gridSpacing;
+
+        // Diagonal lines (top-left to bottom-right)
+        for (let x = -h; x < w + h; x += s) {
+          grid.moveTo(x - cameraX, -cameraY);
+          grid.lineTo(x + h - cameraX, h - cameraY);
+        }
+        // Diagonal lines (top-right to bottom-left)
+        for (let x = -h; x < w + h; x += s) {
+          grid.moveTo(x - cameraX, -cameraY);
+          grid.lineTo(x - h - cameraX, h - cameraY);
+        }
+      }
+
+      // Draw out-of-bounds overlay (covers areas outside valid play area)
+      const oob = app.boundsGraphics;
+      const w = app.screen.width;
+      const h = app.screen.height;
+      const pad = 2000; // Large enough to cover zoomed-out view
+      const oobColor = 0x2a2520;
+
+      oob.clear();
+      oob.beginFill(oobColor);
+      // Left
+      oob.drawRect(-cameraX - pad, -cameraY - pad, pad, h + pad * 2);
+      // Right
+      oob.drawRect(-cameraX + w, -cameraY - pad, pad, h + pad * 2);
+      // Top
+      oob.drawRect(-cameraX, -cameraY - pad, w, pad);
+      // Bottom
+      oob.drawRect(-cameraX, -cameraY + h, w, pad);
+      oob.endFill();
+
+      // Update physics
+      for (const c of circles) {
+        c.update();
+      }
+
+      // Check collisions
+      for (let i = 0; i < circles.length; i++) {
+        for (let j = i + 1; j < circles.length; j++) {
+          circles[i].checkCollision(circles[j]);
+        }
+      }
+
+      // Update and draw ripples
+      for (const ripple of ripples) {
+        ripple.update();
+        ripple.draw();
+      }
+
+      // Update flow field time
+      flowTime += 0.016; // roughly 60fps
+
+      // Update dust particles with flow and collision
+      for (const dust of dustParticles) {
+        // Apply organic flow field
+        dust.applyFlowField();
+        // Apply flow effect from moving circles
+        for (const circle of circles) {
+          dust.checkCircleFlow(circle);
+        }
+        // Keep dust particles outside of circles
+        for (const circle of circles) {
+          dust.checkCircleCollision(circle);
+        }
+        dust.update();
+        dust.draw();
+      }
+
+      // Remove dead ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        if (ripples[i].isDead()) {
+          ripples[i].destroy();
+          ripples.splice(i, 1);
+        }
+      }
+
+      // Draw circles
+      for (const c of circles) {
+        c.draw();
+      }
+
+      // FPS display
+      document.getElementById('fps-display').textContent = Math.round(app.ticker.FPS) + ' fps';
+    }
+
+    function startExperience() {
+      if (started) return;
+      started = true;
+
+      document.getElementById('start-overlay').style.display = 'none';
+      document.getElementById('admin-panel').style.display = 'block';
+
+      initAudio();
+      createCircles();
+      createDustParticles();
+      app.ticker.add(gameLoop);
+    }
+
+    // Admin panel setup
+    function setupAdminPanel() {
+      document.getElementById('circles-slider').addEventListener('input', (e) => {
+        settings.numCircles = parseInt(e.target.value);
+        document.getElementById('circles-val').textContent = settings.numCircles;
+        if (started) createCircles();
+      });
+
+      document.getElementById('instrument-select').addEventListener('change', (e) => {
+        currentInstrument = e.target.value;
+      });
+
+      document.getElementById('scale-select').addEventListener('change', (e) => {
+        currentScale = e.target.value;
+      });
+
+      document.getElementById('volume-slider').addEventListener('input', (e) => {
+        settings.volume = parseInt(e.target.value);
+        document.getElementById('volume-val').textContent = settings.volume + '%';
+        const vol = -6 + (settings.volume / 100) * 18;
+        for (const pool of Object.values(voicePools)) {
+          for (const voice of pool) {
+            if (voice.sampler) voice.sampler.volume.value = vol;
+          }
+        }
+      });
+
+      document.getElementById('room-slider').addEventListener('input', (e) => {
+        settings.roomSize = parseInt(e.target.value);
+        document.getElementById('room-val').textContent = settings.roomSize + '%';
+        updateRoomSize();
+      });
+
+      document.getElementById('velocity-slider').addEventListener('input', (e) => {
+        settings.baseVelocity = parseInt(e.target.value) / 100;
+        document.getElementById('velocity-val').textContent = settings.baseVelocity.toFixed(2);
+        for (const c of circles) {
+          const angle = Math.atan2(c.vy, c.vx);
+          const newSpeed = settings.baseVelocity + (Math.random() - 0.5) * settings.baseVelocity * 0.5;
+          c.vx = Math.cos(angle) * newSpeed;
+          c.vy = Math.sin(angle) * newSpeed;
+        }
+      });
+
+      document.getElementById('radius-slider').addEventListener('input', (e) => {
+        settings.radiusMultiplier = parseInt(e.target.value) / 100;
+        document.getElementById('radius-val').textContent = settings.radiusMultiplier.toFixed(2);
+      });
+
+      document.getElementById('ripple-expand-slider').addEventListener('input', (e) => {
+        settings.rippleExpand = parseInt(e.target.value) / 10;
+        document.getElementById('ripple-expand-val').textContent = settings.rippleExpand.toFixed(1);
+      });
+
+      document.getElementById('ripple-fade-slider').addEventListener('input', (e) => {
+        settings.rippleFade = parseInt(e.target.value) / 10;
+        document.getElementById('ripple-fade-val').textContent = settings.rippleFade.toFixed(1);
+      });
+
+      document.getElementById('dust-count-slider').addEventListener('input', (e) => {
+        settings.dustCount = parseInt(e.target.value);
+        document.getElementById('dust-count-val').textContent = settings.dustCount;
+        if (started) createDustParticles();
+      });
+
+      document.getElementById('dust-vel-slider').addEventListener('input', (e) => {
+        settings.dustVelocity = parseInt(e.target.value) / 100;
+        document.getElementById('dust-vel-val').textContent = settings.dustVelocity.toFixed(2);
+      });
+
+      document.getElementById('dust-power-slider').addEventListener('input', (e) => {
+        settings.dustFlowPower = parseInt(e.target.value) / 10000;
+        document.getElementById('dust-power-val').textContent = settings.dustFlowPower.toFixed(4);
+      });
+
+      document.getElementById('dust-range-slider').addEventListener('input', (e) => {
+        settings.dustFlowRange = parseInt(e.target.value);
+        document.getElementById('dust-range-val').textContent = settings.dustFlowRange;
+      });
+
+      document.getElementById('dust-buffer-slider').addEventListener('input', (e) => {
+        settings.dustCollisionBuffer = parseInt(e.target.value);
+        document.getElementById('dust-buffer-val').textContent = settings.dustCollisionBuffer;
+      });
+
+      document.getElementById('dust-decay-slider').addEventListener('input', (e) => {
+        settings.dustNudgeDecay = parseInt(e.target.value) / 100;
+        document.getElementById('dust-decay-val').textContent = settings.dustNudgeDecay.toFixed(2);
+      });
+
+      document.getElementById('field-strength-slider').addEventListener('input', (e) => {
+        settings.dustFieldStrength = parseInt(e.target.value) / 10000;
+        document.getElementById('field-strength-val').textContent = settings.dustFieldStrength.toFixed(4);
+      });
+
+      document.getElementById('field-scale-slider').addEventListener('input', (e) => {
+        settings.dustFieldScale = parseInt(e.target.value) / 1000;
+        document.getElementById('field-scale-val').textContent = settings.dustFieldScale.toFixed(3);
+      });
+    }
+
+    // Initialize
+    async function init() {
+      await initPixi();
+      setupAdminPanel();
+
+      document.getElementById('start-overlay').addEventListener('click', startExperience);
+      document.addEventListener('keydown', startExperience, { once: true });
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ripple SDF Grid</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      overflow: hidden;
+    }
+    #app {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    #controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-family: system-ui, sans-serif;
+      font-size: 13px;
+      color: #ccc;
+      z-index: 100;
+      min-width: 200px;
+    }
+    #controls h2 {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 0 0 12px 0;
+      color: #888;
+    }
+    #controls .control {
+      margin-bottom: 12px;
+    }
+    #controls label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    #controls .value {
+      font-size: 11px;
+      color: #666;
+      float: right;
+    }
+    #controls input[type="range"] {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+    #controls input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #6c5ce7;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .perf {
+      font-size: 11px;
+      color: #666;
+      font-family: monospace;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="controls">
+    <h2>SDF Ripple Grid</h2>
+    <div class="control">
+      <label>square size <span class="value" id="size-val">30</span></label>
+      <input type="range" id="size-slider" min="10" max="80" value="30">
+    </div>
+    <div class="control">
+      <label>padding <span class="value" id="padding-val">4</span></label>
+      <input type="range" id="padding-slider" min="1" max="20" value="4">
+    </div>
+    <div class="control">
+      <label>border radius <span class="value" id="radius-val">6</span></label>
+      <input type="range" id="radius-slider" min="0" max="20" value="6">
+    </div>
+    <div class="control">
+      <label>ripple speed <span class="value" id="speed-val">3.0</span></label>
+      <input type="range" id="speed-slider" min="5" max="100" value="30">
+    </div>
+    <div class="control">
+      <label>ripple width <span class="value" id="width-val">50</span></label>
+      <input type="range" id="width-slider" min="10" max="200" value="50">
+    </div>
+    <div class="control">
+      <label>effect strength <span class="value" id="strength-val">0.5</span></label>
+      <input type="range" id="strength-slider" min="1" max="20" value="5">
+    </div>
+    <div class="control">
+      <label>circle nudge <span class="value" id="nudge-val">0.02</span></label>
+      <input type="range" id="nudge-slider" min="0" max="20" value="2">
+    </div>
+    <div class="control">
+      <label>strength fade <span class="value" id="fade-val">1.0</span></label>
+      <input type="range" id="fade-slider" min="1" max="50" value="10">
+    </div>
+    <div class="control">
+      <label><input type="checkbox" id="drag-toggle" checked> enable drag</label>
+    </div>
+    <div class="perf">
+      <span id="fps-display">-- fps</span> | <span id="tile-count">0 tiles</span>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"></script>
+
+  <script>
+    // Settings
+    const settings = {
+      squareSize: 30,
+      padding: 4,
+      borderRadius: 6,
+      rippleSpeed: 3.0,
+      rippleWidth: 50,    // Width of the ripple "ring"
+      effectStrength: 0.5, // How much squares grow
+      circleNudge: 0.02,  // How much ripples push circles
+      circleDrag: 0.995,  // Velocity drag on circles
+      dragEnabled: true,
+      strengthFade: 1.0   // How fast ripple strength fades (1=linear, higher=faster)
+    };
+
+    // Colors
+    const palette = [0x6c5ce7, 0x00cec9, 0xfd79a8, 0xffeaa7];
+    const tileColor = 0x2d2d44;
+
+    let app;
+    let circles = [];
+    let ripples = [];
+    let tiles = [];
+    let circleContainer;
+    let tileContainer;
+
+    // Tile class - a single grid square
+    class Tile {
+      constructor(x, y) {
+        this.x = x;  // Center position
+        this.y = y;
+        this.baseSize = settings.squareSize;
+        this.currentSize = this.baseSize;
+        this.graphics = new PIXI.Graphics();
+        tileContainer.addChild(this.graphics);
+      }
+
+      update() {
+        // Calculate effect from all ripples
+        let totalEffect = 0;
+
+        for (const ripple of ripples) {
+          // Distance from tile center to ripple center
+          const dx = this.x - ripple.x;
+          const dy = this.y - ripple.y;
+          const distToCenter = Math.sqrt(dx * dx + dy * dy);
+
+          // Distance to the ripple's edge (ring)
+          const distToEdge = Math.abs(distToCenter - ripple.radius);
+
+          // Effect falls off based on distance to edge
+          // Closer to edge = stronger effect
+          if (distToEdge < settings.rippleWidth) {
+            // Smooth falloff using cosine
+            const t = distToEdge / settings.rippleWidth;
+            const effect = Math.cos(t * Math.PI * 0.5); // 1 at edge, 0 at rippleWidth
+            totalEffect += effect * ripple.strength;
+          }
+        }
+
+        // Apply effect to size
+        this.currentSize = this.baseSize + totalEffect * settings.effectStrength * this.baseSize;
+      }
+
+      draw() {
+        this.graphics.clear();
+
+        const halfSize = this.currentSize / 2;
+        const br = Math.min(settings.borderRadius, halfSize);
+
+        this.graphics.beginFill(tileColor, 1);
+        this.graphics.drawRoundedRect(
+          this.x - halfSize,
+          this.y - halfSize,
+          this.currentSize,
+          this.currentSize,
+          br
+        );
+        this.graphics.endFill();
+      }
+
+      destroy() {
+        tileContainer.removeChild(this.graphics);
+        this.graphics.destroy();
+      }
+    }
+
+    // Ripple class - SDF-based expanding ring
+    class Ripple {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.radius = 0;
+        this.color = color;
+        this.strength = 1;
+        this.maxRadius = Math.max(app.screen.width, app.screen.height) * 1.5;
+      }
+
+      update() {
+        this.radius += settings.rippleSpeed;
+        // Fade out strength as it expands (power curve for adjustable fade)
+        const t = this.radius / this.maxRadius;
+        this.strength = Math.pow(1 - t, settings.strengthFade);
+      }
+
+      isDead() {
+        return this.radius > this.maxRadius;
+      }
+    }
+
+    // Circle class
+    class Circle {
+      constructor(x, y, radius, color) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.color = color;
+
+        this.vx = 0;
+        this.vy = 0;
+
+        this.graphics = new PIXI.Graphics();
+        circleContainer.addChild(this.graphics);
+      }
+
+      update() {
+        // Apply drag
+        if (settings.dragEnabled) {
+          this.vx *= settings.circleDrag;
+          this.vy *= settings.circleDrag;
+        }
+
+        // Apply nudge from ripples
+        for (const ripple of ripples) {
+          const dx = this.x - ripple.x;
+          const dy = this.y - ripple.y;
+          const distToRippleCenter = Math.sqrt(dx * dx + dy * dy);
+
+          // Distance from ripple edge to circle center
+          const distEdgeToCenter = Math.abs(distToRippleCenter - ripple.radius);
+
+          // Check if ripple edge is within the circle
+          if (distEdgeToCenter < this.radius) {
+            // Nudge strength: strongest at center (1), weakest at edge (0)
+            const strength = 1 - (distEdgeToCenter / this.radius);
+
+            // Direction: away from ripple center
+            if (distToRippleCenter > 0) {
+              const nx = dx / distToRippleCenter;
+              const ny = dy / distToRippleCenter;
+
+              // Apply nudge
+              const nudgeForce = strength * settings.circleNudge * ripple.strength;
+              this.vx += nx * nudgeForce;
+              this.vy += ny * nudgeForce;
+            }
+          }
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Wall collision
+        if (this.x - this.radius < 0) {
+          this.x = this.radius;
+          this.vx *= -1;
+        } else if (this.x + this.radius > app.screen.width) {
+          this.x = app.screen.width - this.radius;
+          this.vx *= -1;
+        }
+        if (this.y - this.radius < 0) {
+          this.y = this.radius;
+          this.vy *= -1;
+        } else if (this.y + this.radius > app.screen.height) {
+          this.y = app.screen.height - this.radius;
+          this.vy *= -1;
+        }
+      }
+
+      checkCollision(other) {
+        const dx = other.x - this.x;
+        const dy = other.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = this.radius + other.radius;
+
+        if (dist < minDist && dist > 0) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const dvx = this.vx - other.vx;
+          const dvy = this.vy - other.vy;
+          const dvn = dvx * nx + dvy * ny;
+
+          if (dvn > 0) {
+            this.vx -= dvn * nx;
+            this.vy -= dvn * ny;
+            other.vx += dvn * nx;
+            other.vy += dvn * ny;
+
+            const overlap = (minDist - dist) / 2;
+            this.x -= overlap * nx;
+            this.y -= overlap * ny;
+            other.x += overlap * nx;
+            other.y += overlap * ny;
+
+            // Create one ripple at the collision point
+            const collisionX = (this.x + other.x) / 2;
+            const collisionY = (this.y + other.y) / 2;
+            const color = Math.random() < 0.5 ? this.color : other.color;
+            ripples.push(new Ripple(collisionX, collisionY, color));
+          }
+        }
+      }
+
+      draw() {
+        this.graphics.clear();
+        this.graphics.beginFill(this.color, 0.8);
+        this.graphics.drawCircle(this.x, this.y, this.radius);
+        this.graphics.endFill();
+      }
+    }
+
+    function createTiles() {
+      // Clear existing tiles
+      for (const tile of tiles) {
+        tile.destroy();
+      }
+      tiles = [];
+
+      const cellSize = settings.squareSize + settings.padding;
+      const cols = Math.ceil(app.screen.width / cellSize) + 1;
+      const rows = Math.ceil(app.screen.height / cellSize) + 1;
+
+      // Offset to center the grid
+      const offsetX = (app.screen.width - (cols - 1) * cellSize) / 2;
+      const offsetY = (app.screen.height - (rows - 1) * cellSize) / 2;
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const x = offsetX + col * cellSize;
+          const y = offsetY + row * cellSize;
+          tiles.push(new Tile(x, y));
+        }
+      }
+    }
+
+    function gameLoop() {
+      // Update circles
+      for (const c of circles) {
+        c.update();
+      }
+
+      // Check circle collisions
+      for (let i = 0; i < circles.length; i++) {
+        for (let j = i + 1; j < circles.length; j++) {
+          circles[i].checkCollision(circles[j]);
+        }
+      }
+
+      // Update ripples
+      for (const ripple of ripples) {
+        ripple.update();
+      }
+
+      // Remove dead ripples
+      ripples = ripples.filter(r => !r.isDead());
+
+      // Update and draw tiles
+      for (const tile of tiles) {
+        tile.baseSize = settings.squareSize;
+        tile.update();
+        tile.draw();
+      }
+
+      // Draw circles
+      for (const c of circles) {
+        c.draw();
+      }
+
+      // Update stats
+      document.getElementById('fps-display').textContent = Math.round(app.ticker.FPS) + ' fps';
+      document.getElementById('tile-count').textContent = tiles.length + ' tiles';
+    }
+
+    function setupControls() {
+      document.getElementById('size-slider').addEventListener('input', (e) => {
+        settings.squareSize = parseInt(e.target.value);
+        document.getElementById('size-val').textContent = settings.squareSize;
+        createTiles();
+      });
+
+      document.getElementById('padding-slider').addEventListener('input', (e) => {
+        settings.padding = parseInt(e.target.value);
+        document.getElementById('padding-val').textContent = settings.padding;
+        createTiles();
+      });
+
+      document.getElementById('radius-slider').addEventListener('input', (e) => {
+        settings.borderRadius = parseInt(e.target.value);
+        document.getElementById('radius-val').textContent = settings.borderRadius;
+      });
+
+      document.getElementById('speed-slider').addEventListener('input', (e) => {
+        settings.rippleSpeed = parseInt(e.target.value) / 10;
+        document.getElementById('speed-val').textContent = settings.rippleSpeed.toFixed(1);
+      });
+
+      document.getElementById('width-slider').addEventListener('input', (e) => {
+        settings.rippleWidth = parseInt(e.target.value);
+        document.getElementById('width-val').textContent = settings.rippleWidth;
+      });
+
+      document.getElementById('strength-slider').addEventListener('input', (e) => {
+        settings.effectStrength = parseInt(e.target.value) / 10;
+        document.getElementById('strength-val').textContent = settings.effectStrength.toFixed(1);
+      });
+
+      document.getElementById('nudge-slider').addEventListener('input', (e) => {
+        settings.circleNudge = parseInt(e.target.value) / 100;
+        document.getElementById('nudge-val').textContent = settings.circleNudge.toFixed(2);
+      });
+
+      document.getElementById('fade-slider').addEventListener('input', (e) => {
+        settings.strengthFade = parseInt(e.target.value) / 10;
+        document.getElementById('fade-val').textContent = settings.strengthFade.toFixed(1);
+      });
+
+      document.getElementById('drag-toggle').addEventListener('change', (e) => {
+        settings.dragEnabled = e.target.checked;
+      });
+    }
+
+    function init() {
+      app = new PIXI.Application({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: 0x1a1a2e,
+        antialias: true,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+      });
+      document.getElementById('app').appendChild(app.view);
+
+      // Containers
+      tileContainer = new PIXI.Container();
+      circleContainer = new PIXI.Container();
+      app.stage.addChild(tileContainer);
+      app.stage.addChild(circleContainer);
+
+      // Create grid
+      createTiles();
+
+      // Create circles
+      for (let i = 0; i < 4; i++) {
+        circles.push(new Circle(
+          100 + Math.random() * (app.screen.width - 200),
+          100 + Math.random() * (app.screen.height - 200),
+          35 + Math.random() * 20,
+          palette[i % palette.length]
+        ));
+      }
+
+      // Handle resize
+      window.addEventListener('resize', () => {
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+        createTiles();
+      });
+
+      // Create random ripples every 3 seconds
+      setInterval(() => {
+        const x = Math.random() * app.screen.width;
+        const y = Math.random() * app.screen.height;
+        const color = palette[Math.floor(Math.random() * palette.length)];
+        ripples.push(new Ripple(x, y, color));
+      }, 3000);
+
+      setupControls();
+      app.ticker.add(gameLoop);
+    }
+
+    init();
+  </script>
+</body>
+</html>
