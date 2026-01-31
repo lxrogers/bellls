@@ -1,6 +1,6 @@
 // Settings - single source of truth for all tweakable parameters
 export const settings = {
-  numCircles: 6,
+  numCircles: 9,
   volume: 70,
   roomSize: 50,
   baseVelocity: 0.2,

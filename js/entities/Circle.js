@@ -2,7 +2,7 @@ import { settings } from '../settings.js';
 import { getTheme } from '../themes.js';
 import { flowNoise, flowTime } from '../utils/flow-field.js';
 import { playNote } from '../audio/play-note.js';
-import { app, circles, circleContainer } from '../engine/pixi-app.js';
+import { app, circles, circleContainer, getScreenScale } from '../engine/pixi-app.js';
 import * as camera from '../engine/camera.js';
 import { createRipple } from './Ripple.js';
 import { scales, currentScale } from '../audio/scales.js';
@@ -27,7 +27,7 @@ export class Circle {
   }
 
   get r() {
-    return this.radius * settings.radiusMultiplier;
+    return this.radius * settings.radiusMultiplier * getScreenScale();
   }
 
   get mass() {

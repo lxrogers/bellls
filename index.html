@@ -36,20 +36,66 @@
       align-items: center;
       z-index: 1000;
       cursor: pointer;
+      overflow: hidden;
     }
     #start-overlay h1 {
       color: #3a3632;
       font-family: Georgia, 'Times New Roman', serif;
       font-weight: 400;
       font-size: 1.8rem;
-      margin-bottom: 1rem;
       letter-spacing: 0.15em;
+      transition: transform 0.6s ease-out;
+      z-index: 2;
+      position: relative;
     }
-    #start-overlay p {
-      color: #7a756d;
+    #wave-container {
+      position: absolute;
+      width: 120%;
+      height: 200px;
+      left: -10%;
+      top: calc(50% + -21px);
+      transition: transform 0.6s ease-out;
+      z-index: 3;
+    }
+    #wave-canvas {
+      width: 100%;
+      height: 100%;
+    }
+    #submerge-control {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 0.85rem;
-      font-style: italic;
+      font-size: 0.75rem;
+      color: #5a554d;
+    }
+    #submerge-control label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #submerge-control input[type="range"] {
+      width: 120px;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+    #submerge-control input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #3a3632;
+      border-radius: 50%;
+      cursor: pointer;
     }
 
     /* Settings gear button */
@@ -263,8 +309,8 @@
   <div id="admin-panel">
     <h2>controls</h2>
     <div class="control">
-      <label>circles <span class="value" id="circles-val">6</span></label>
-      <input type="range" id="circles-slider" min="2" max="200" value="6">
+      <label>circles <span class="value" id="circles-val">9</span></label>
+      <input type="range" id="circles-slider" min="2" max="200" value="9">
     </div>
     <div class="control">
       <label>scale</label>
@@ -360,9 +406,122 @@
   </div>
 
   <div id="start-overlay">
-    <h1>sound bath</h1>
-    <p>click anywhere to begin</p>
+    <h1>enter bath →</h1>
+    <div id="wave-container">
+      <canvas id="wave-canvas"></canvas>
+    </div>
+    <div id="submerge-control">
+      <label>submerge: <span id="submerge-val">6</span></label>
+      <input type="range" id="submerge-slider" min="1" max="150" value="6">
+      <label>wave Y: <span id="wave-y-val">-21</span></label>
+      <input type="range" id="wave-y-slider" min="-50" max="150" value="-21">
+    </div>
   </div>
+
+  <script>
+    // Wave animation for start overlay
+    (function() {
+      const canvas = document.getElementById('wave-canvas');
+      const ctx = canvas.getContext('2d');
+      const overlay = document.getElementById('start-overlay');
+      const title = overlay.querySelector('h1');
+      const waveContainer = document.getElementById('wave-container');
+      const submergeSlider = document.getElementById('submerge-slider');
+      const submergeVal = document.getElementById('submerge-val');
+      const waveYSlider = document.getElementById('wave-y-slider');
+      const waveYVal = document.getElementById('wave-y-val');
+
+      let animationId;
+      let time = 0;
+      let submergeAmount = 6;
+      let waveYOffset = -21;
+
+      submergeSlider.addEventListener('input', (e) => {
+        submergeAmount = parseInt(e.target.value);
+        submergeVal.textContent = submergeAmount;
+      });
+
+      waveYSlider.addEventListener('input', (e) => {
+        waveYOffset = parseInt(e.target.value);
+        waveYVal.textContent = waveYOffset;
+        waveContainer.style.top = `calc(50% + ${waveYOffset}px)`;
+      });
+
+      // Prevent slider clicks from triggering the start
+      submergeSlider.addEventListener('click', (e) => e.stopPropagation());
+      waveYSlider.addEventListener('click', (e) => e.stopPropagation());
+
+      function resize() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+
+      function drawWave() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#f5f0e8';
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height);
+
+        const amplitude = 6;
+        const frequency = 0.02;
+        const speed = 0.008;
+
+        for (let x = 0; x <= canvas.width; x++) {
+          const y = Math.sin(x * frequency + time * speed) * amplitude + 40;
+          ctx.lineTo(x, y);
+        }
+
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function animate() {
+        time++;
+        drawWave();
+        animationId = requestAnimationFrame(animate);
+      }
+
+      // Detect mouse proximity to title
+      overlay.addEventListener('mousemove', (e) => {
+        const rect = title.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const distance = Math.sqrt(
+          Math.pow(e.clientX - centerX, 2) +
+          Math.pow(e.clientY - centerY, 2)
+        );
+
+        if (distance < 150) {
+          overlay.classList.add('submerged');
+          title.style.transform = `translateY(${submergeAmount}px)`;
+          waveContainer.style.transform = `translateY(${-submergeAmount * 1.3}px)`;
+        } else {
+          overlay.classList.remove('submerged');
+          title.style.transform = 'translateY(0)';
+          waveContainer.style.transform = 'translateY(0)';
+        }
+      });
+
+      overlay.addEventListener('mouseleave', () => {
+        overlay.classList.remove('submerged');
+        title.style.transform = 'translateY(0)';
+        waveContainer.style.transform = 'translateY(0)';
+      });
+
+      // Stop animation when overlay is hidden
+      const observer = new MutationObserver(() => {
+        if (overlay.style.display === 'none') {
+          cancelAnimationFrame(animationId);
+        }
+      });
+      observer.observe(overlay, { attributes: true, attributeFilter: ['style'] });
+
+      resize();
+      window.addEventListener('resize', resize);
+      animate();
+    })();
+  </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"></script>

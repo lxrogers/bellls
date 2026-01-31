@@ -103,4 +103,8 @@ async function init() {
   document.addEventListener('keydown', startExperience, { once: true });
 }
 
-init();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
