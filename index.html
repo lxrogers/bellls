@@ -166,6 +166,15 @@
       </select>
     </div>
     <div class="control">
+      <label>theme</label>
+      <select id="theme-select">
+        <option value="warm">Warm Sand</option>
+        <option value="aquatic">Aquatic</option>
+        <option value="dark">Midnight</option>
+        <option value="blossom">Blossom</option>
+      </select>
+    </div>
+    <div class="control">
       <label>volume <span class="value" id="volume-val">70%</span></label>
       <input type="range" id="volume-slider" min="0" max="100" value="70">
     </div>
@@ -254,15 +263,89 @@
       dustFieldScale: 0.005
     };
 
-    // Palette (blended equivalents at full opacity)
-    const palette = [
-      0xe3d2b6,  // warm ochre blended
-      0xcbbead,  // warm brown blended
-      0xd3b19d,  // sienna blended
-      0xe5c5a4,  // peru blended
-      0xe7ba97,  // chocolate blended
-      0xddc68f,  // dark goldenrod blended
-    ];
+    // Themes
+    const themes = {
+      warm: {
+        name: 'Warm Sand',
+        background: 0xf5f0e8,
+        outOfBounds: 0x2a2520,
+        grid: 0x8b7355,
+        ripple: 0xffffff,
+        palette: [
+          0xe3d2b6,  // warm ochre
+          0xcbbead,  // warm brown
+          0xd3b19d,  // sienna
+          0xe5c5a4,  // peru
+          0xe7ba97,  // chocolate
+          0xddc68f,  // dark goldenrod
+        ]
+      },
+      aquatic: {
+        name: 'Aquatic',
+        background: 0xe8f4f5,
+        outOfBounds: 0x1a2a2e,
+        grid: 0x7ba3a8,
+        ripple: 0xffffff,
+        palette: [
+          0x7eb8c9,  // deeper teal
+          0xb5c9a8,  // sea moss
+          0xe8c4b8,  // coral sand
+          0x9ab8d8,  // soft periwinkle
+          0xc9d4a8,  // kelp green
+          0xd8b8c4,  // sea anemone pink
+        ]
+      },
+      dark: {
+        name: 'Midnight',
+        background: 0x1e1e2e,
+        outOfBounds: 0x0a0a12,
+        grid: 0x4a4a6a,
+        ripple: 0x6a6a8a,
+        palette: [
+          0x7a7a9a,  // muted lavender
+          0x8a8aa8,  // dusty purple
+          0x6a7a8a,  // slate
+          0x9a8a9a,  // mauve
+          0x7a8a8a,  // sage grey
+          0x8a7a8a,  // dusty rose
+        ]
+      },
+      blossom: {
+        name: 'Blossom',
+        background: 0xf8f0f4,
+        outOfBounds: 0x2a2028,
+        grid: 0xb89aaa,
+        ripple: 0xffffff,
+        palette: [
+          0xe8c8d8,  // soft pink
+          0xd8c0d0,  // dusty rose
+          0xc8b8c8,  // lavender
+          0xe0d0dc,  // pale mauve
+          0xd0c8d8,  // lilac
+          0xe8d8e4,  // blush
+        ]
+      }
+    };
+    let currentTheme = 'warm';
+
+    function applyTheme(themeName) {
+      currentTheme = themeName;
+      const theme = themes[themeName];
+
+      // Update background
+      if (app && app.renderer) {
+        app.renderer.background.color = theme.background;
+      }
+
+      // Update circle colors
+      circles.forEach((circle, i) => {
+        circle.color = theme.palette[i % theme.palette.length];
+      });
+    }
+
+    function getTheme() {
+      return themes[currentTheme];
+    }
 
     // Audio setup
     let audioReady = false;
@@ -476,9 +559,28 @@
     let targetCameraZoom = 1;
     let gridOpacity = 0;
     let targetGridOpacity = 0;
-    const cameraSmoothing = 0.05; // How fast camera catches up (0-1)
+
+    // Animation state
+    let animationStart = null;
+    let animationDuration = 1500; // 3x longer (~1.5 seconds)
+    let startCameraX = 0;
+    let startCameraY = 0;
+    let startCameraZoom = 1;
+    let startGridOpacity = 0;
+    let prevTargetCameraX = 0;
+    let prevTargetCameraY = 0;
+    let prevTargetCameraZoom = 1;
+    let prevTargetGridOpacity = 0;
+
     const followZoom = 1.8; // Zoom level when following
     const gridSpacing = 40; // Diamond grid spacing
+
+    // Ease-in-out function
+    function easeInOutCubic(t) {
+      return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
 
     // Simple noise function for flow field
     let flowTime = 0;
@@ -642,7 +744,7 @@
       app = new PIXI.Application({
         width: window.innerWidth,
         height: window.innerHeight,
-        backgroundColor: 0xf5f0e8, // Valid area color
+        backgroundColor: getTheme().background,
         antialias: true,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
@@ -904,7 +1006,7 @@
         const drawY = this.y - cameraY;
 
         this.graphics.clear();
-        this.graphics.lineStyle(2, 0xffffff, this.opacity);
+        this.graphics.lineStyle(2, getTheme().ripple, this.opacity);
         this.graphics.drawCircle(drawX, drawY, this.radius);
       }
 
@@ -961,7 +1063,7 @@
           return Math.sqrt(dx * dx + dy * dy) < c.radius + radius + 20;
         }));
 
-        circles.push(new Circle(x, y, radius, noteIndex, palette[i % palette.length]));
+        circles.push(new Circle(x, y, radius, noteIndex, getTheme().palette[i % getTheme().palette.length]));
       }
     }
 
@@ -981,11 +1083,51 @@
         targetGridOpacity = 0.11; // Subtle grid in normal mode too
       }
 
-      // Smooth camera movement, zoom, and grid opacity
-      cameraX += (targetCameraX - cameraX) * cameraSmoothing;
-      cameraY += (targetCameraY - cameraY) * cameraSmoothing;
-      cameraZoom += (targetCameraZoom - cameraZoom) * cameraSmoothing;
-      gridOpacity += (targetGridOpacity - gridOpacity) * cameraSmoothing;
+      // Detect target change and start new animation
+      if (targetCameraZoom !== prevTargetCameraZoom || targetGridOpacity !== prevTargetGridOpacity) {
+        animationStart = performance.now();
+        startCameraX = cameraX;
+        startCameraY = cameraY;
+        startCameraZoom = cameraZoom;
+        startGridOpacity = gridOpacity;
+        prevTargetCameraX = targetCameraX;
+        prevTargetCameraY = targetCameraY;
+        prevTargetCameraZoom = targetCameraZoom;
+        prevTargetGridOpacity = targetGridOpacity;
+      }
+
+      // Animate with ease-in-out
+      if (animationStart !== null) {
+        const elapsed = performance.now() - animationStart;
+        const progress = Math.min(elapsed / animationDuration, 1);
+        const eased = easeInOutCubic(progress);
+
+        cameraZoom = startCameraZoom + (targetCameraZoom - startCameraZoom) * eased;
+        gridOpacity = startGridOpacity + (targetGridOpacity - startGridOpacity) * eased;
+
+        // For camera position, blend between animated and live tracking
+        if (followedCircle) {
+          // When following, smoothly transition to tracking then follow live
+          const trackingBlend = eased;
+          const animatedX = startCameraX + (prevTargetCameraX - startCameraX) * eased;
+          const animatedY = startCameraY + (prevTargetCameraY - startCameraY) * eased;
+          const liveX = followedCircle.x - app.screen.width / 2;
+          const liveY = followedCircle.y - app.screen.height / 2;
+          cameraX = animatedX + (liveX - animatedX) * trackingBlend;
+          cameraY = animatedY + (liveY - animatedY) * trackingBlend;
+        } else {
+          cameraX = startCameraX + (targetCameraX - startCameraX) * eased;
+          cameraY = startCameraY + (targetCameraY - startCameraY) * eased;
+        }
+
+        if (progress >= 1) {
+          animationStart = null;
+        }
+      } else if (followedCircle) {
+        // After animation, track the circle live
+        cameraX = followedCircle.x - app.screen.width / 2;
+        cameraY = followedCircle.y - app.screen.height / 2;
+      }
 
       // Apply zoom to stage
       app.stage.scale.set(cameraZoom);
@@ -996,7 +1138,7 @@
       const grid = app.gridGraphics;
       grid.clear();
       if (gridOpacity > 0.001) {
-        grid.lineStyle(1, 0x8b7355, gridOpacity);
+        grid.lineStyle(1, getTheme().grid, gridOpacity);
         const w = app.screen.width;
         const h = app.screen.height;
         const s = gridSpacing;
@@ -1018,7 +1160,7 @@
       const w = app.screen.width;
       const h = app.screen.height;
       const pad = 2000; // Large enough to cover zoomed-out view
-      const oobColor = 0x2a2520;
+      const oobColor = getTheme().outOfBounds;
 
       oob.clear();
       oob.beginFill(oobColor);
@@ -1113,6 +1255,10 @@
 
       document.getElementById('scale-select').addEventListener('change', (e) => {
         currentScale = e.target.value;
+      });
+
+      document.getElementById('theme-select').addEventListener('change', (e) => {
+        applyTheme(e.target.value);
       });
 
       document.getElementById('volume-slider').addEventListener('input', (e) => {
