@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Source sample libraries (not needed for deployment)
+VCSL-1.2.2-RC/
+kalimba-kenya/
+kalimba-tanzania/
+
+# Prototype files
+ripple-sdf.html
+ripple-prototype.html
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
