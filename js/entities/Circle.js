@@ -21,6 +21,12 @@ export class Circle {
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
 
+    // Z-axis for bobbing effect (0 = resting, positive = "up"/closer)
+    this.z = 0;
+    this.vz = 0;
+    this.zSpring = 0.02;   // Spring stiffness (very soft)
+    this.zDamping = 0.98;  // Velocity damping (slow decay)
+
     // Graphics
     this.graphics = new PIXI.Graphics();
     circleContainer.addChild(this.graphics);
@@ -43,6 +49,31 @@ export class Circle {
     const force = settings.dustFieldStrength / (this.mass * 0.5);
     this.vx += Math.cos(angle) * force;
     this.vy += Math.sin(angle) * force;
+  }
+
+  // Check if a ripple's expanding ring passes through this circle's center
+  checkRippleHit(ripple) {
+    const dx = this.x - ripple.x;
+    const dy = this.y - ripple.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Ripple ring passed through center this frame
+    if (dist >= ripple.prevRadius && dist < ripple.radius) {
+      // Give upward impulse, scaled by ripple opacity (newer ripples = stronger)
+      const impulse = ripple.opacity * 0.03;
+      this.vz += impulse;
+    }
+  }
+
+  updateZ() {
+    // Spring physics: accelerate toward z=0
+    const springForce = -this.z * this.zSpring;
+    this.vz += springForce;
+    this.vz *= this.zDamping;
+    this.z += this.vz;
+
+    // Clamp to reasonable range
+    this.z = Math.max(-0.5, Math.min(1.5, this.z));
   }
 
   update() {
@@ -130,7 +161,10 @@ export class Circle {
   }
 
   draw() {
-    const r = this.r;
+    const baseR = this.r;
+    // Scale radius based on z (higher = bigger, like coming closer)
+    const zScale = 1 + this.z * 0.15;
+    const r = baseR * zScale;
     const drawX = this.x - camera.cameraX;
     const drawY = this.y - camera.cameraY;
 

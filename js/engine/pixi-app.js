@@ -1,5 +1,8 @@
 import { getTheme } from '../themes.js';
 import * as camera from './camera.js';
+// PixiJS is loaded via CDN in index.html, so we need to access it from the global scope
+// We'll use the global PIXI object instead of ES6 imports
+// import { BlurFilter } from 'pixi.js';
 
 // PixiJS Application instance
 export let app = null;
@@ -41,6 +44,10 @@ export async function initPixi() {
 
   // Create containers for layering
   const gridContainer = new PIXI.Container();
+  const blurFilter = new PIXI.filters.BlurFilter();
+  blurFilter.blur = 1; // Subtle blur for grid background
+  gridContainer.filters = [blurFilter];
+  
   rippleContainer = new PIXI.Container();
   dustContainer = new PIXI.Container();
   circleContainer = new PIXI.Container();
@@ -50,11 +57,6 @@ export async function initPixi() {
   const gridGraphics = new PIXI.Graphics();
   gridContainer.addChild(gridGraphics);
 
-  // Blur the grid for a softer pool-bottom feel
-  const gridBlur = new PIXI.filters.BlurFilter();
-  gridBlur.blur = 2;
-  gridContainer.filters = [gridBlur];
-
   // Out-of-bounds overlay (drawn on top of everything)
   const boundsGraphics = new PIXI.Graphics();
   boundsOverlay.addChild(boundsGraphics);
@@ -62,7 +64,9 @@ export async function initPixi() {
   // Store for updating in game loop
   app.gridGraphics = gridGraphics;
   app.boundsGraphics = boundsGraphics;
+  app.gridBlurFilter = blurFilter;
 
+  // All PixiJS classes are available globally via the PIXI object since it's loaded via CDN
   app.stage.addChild(gridContainer);
   app.stage.addChild(rippleContainer);
   app.stage.addChild(dustContainer);

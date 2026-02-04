@@ -25,6 +25,18 @@ export function physicsLoop() {
     ripple.update();
   }
 
+  // Check ripple-circle intersections (for z-bobbing) - after update so prevRadius/radius are current
+  for (const ripple of ripples) {
+    for (const circle of circles) {
+      circle.checkRippleHit(ripple);
+    }
+  }
+
+  // Update circle z-axis spring physics
+  for (const circle of circles) {
+    circle.updateZ();
+  }
+
   // Update flow field time
   updateFlowTime(0.016);
 
@@ -59,10 +71,10 @@ export function gameLoop() {
       camera.followedCircle.x - app.screen.width / 2,
       camera.followedCircle.y - app.screen.height / 2,
       camera.followZoom,
-      0.15
+      0.35
     );
   } else {
-    camera.setTargetCamera(0, 0, 1, 0.11);
+    camera.setTargetCamera(0, 0, 1, 0.25);
   }
 
   // Detect target change and start new animation
@@ -114,11 +126,13 @@ export function gameLoop() {
   app.stage.pivot.set(app.screen.width / 2, app.screen.height / 2);
   app.stage.position.set(app.screen.width / 2, app.screen.height / 2);
 
+
+
   // Draw diamond grid pattern
   const grid = app.gridGraphics;
   grid.clear();
   if (camera.gridOpacity > 0.001) {
-    grid.lineStyle(1, getTheme().grid, camera.gridOpacity);
+    grid.lineStyle(1.5, getTheme().grid, camera.gridOpacity);
     const w = app.screen.width;
     const h = app.screen.height;
     const s = camera.gridSpacing;

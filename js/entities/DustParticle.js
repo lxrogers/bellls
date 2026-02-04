@@ -119,15 +119,37 @@ export class DustParticle {
     const dx = this.x - circle.x;
     const dy = this.y - circle.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-
-    // Velocity-based buffer: scales with circle speed up to max
-    const circleSpeed = Math.sqrt(circle.vx * circle.vx + circle.vy * circle.vy);
-    const buffer = Math.min(settings.dustCollisionBuffer, circleSpeed * 50);
-
-    const minDist = circle.r + this.size + buffer;
-
-    // If inside the barrier, push to the edge
-    if (dist < minDist && dist > 0) {
+    
+    // Only apply position-based repulsion if particle is between 2-20px from circle edge
+    const repulsionMin = circle.r + this.size + 2;
+    const repulsionMax = circle.r + this.size + 20;
+    
+    // If particle is within repulsion range (2-20px from edge)
+    if (dist >= repulsionMin && dist <= repulsionMax) {
+      // Calculate direction from circle center to particle
+      const nx = dx / dist;
+      const ny = dy / dist;
+      
+      // Calculate repulsion strength - stronger when closer to circle edge
+      const distanceFromEdge = dist - (circle.r + this.size);
+      const repulsionFactor = 1 - (distanceFromEdge / 18); // 1.0 at 2px, 0.0 at 20px
+      
+      // Apply position repulsion - push particle further away from circle center
+      // Extreme multiplier to shoot particles across screen at max setting
+      const repulsionDistance = repulsionFactor * settings.dustPositionRepulsion * 20;
+      this.x += nx * repulsionDistance;
+      this.y += ny * repulsionDistance;
+      
+      // Debug: Log the repulsion effect when it occurs
+      if (settings.dustPositionRepulsion > 0.05 && repulsionFactor > 0.8) {
+        console.log(`Repulsion: distance=${dist.toFixed(2)}, factor=${repulsionFactor.toFixed(2)}, distance=${repulsionDistance.toFixed(3)}`);
+      }
+    }
+    
+    // Collision buffer: prevent particles from getting within 2 pixels of circle edge
+    // Only apply if particle is inside the buffer (not in repulsion range)
+    const minDist = circle.r + this.size + 2;
+    if (dist < minDist && dist > 0 && (dist < repulsionMin || dist > repulsionMax)) {
       const nx = dx / dist;
       const ny = dy / dist;
       this.x = circle.x + nx * minDist;

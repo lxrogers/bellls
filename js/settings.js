@@ -14,5 +14,6 @@ export const settings = {
   dustCollisionBuffer: 15,
   dustNudgeDecay: 0.95,
   dustFieldStrength: 0.0008,
-  dustFieldScale: 0.005
+  dustFieldScale: 0.005,
+  dustPositionRepulsion: 0.01  // Default value for repulsion
 };

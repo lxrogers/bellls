@@ -84,6 +84,11 @@ export function setupAdminPanel() {
     document.getElementById('dust-buffer-val').textContent = settings.dustCollisionBuffer;
   });
 
+  document.getElementById('dust-repulsion-slider').addEventListener('input', (e) => {
+    settings.dustPositionRepulsion = parseInt(e.target.value) / 100000;
+    document.getElementById('dust-repulsion-val').textContent = settings.dustPositionRepulsion.toFixed(6);
+  });
+
   document.getElementById('dust-decay-slider').addEventListener('input', (e) => {
     settings.dustNudgeDecay = parseInt(e.target.value) / 100;
     document.getElementById('dust-decay-val').textContent = settings.dustNudgeDecay.toFixed(2);
