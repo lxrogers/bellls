@@ -1,6 +1,6 @@
 import { settings } from '../settings.js';
 import { flowNoise, flowTime } from '../utils/flow-field.js';
-import { app, dustParticles, dustContainer, circles } from '../engine/pixi-app.js';
+import { app, dustParticles, dustContainer, circles, slides } from '../engine/pixi-app.js';
 import * as camera from '../engine/camera.js';
 
 export class DustParticle {
@@ -120,11 +120,15 @@ export class DustParticle {
     const dy = this.y - circle.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     
+    // Collision buffer: prevent particles from getting within 2 pixels of circle edge
+    const minDist = circle.r + this.size + 2;
+    
     // Only apply position-based repulsion if particle is between 2-20px from circle edge
     const repulsionMin = circle.r + this.size + 2;
     const repulsionMax = circle.r + this.size + 20;
     
     // If particle is within repulsion range (2-20px from edge)
+    // Include the exact 2px boundary in repulsion calculation
     if (dist >= repulsionMin && dist <= repulsionMax) {
       // Calculate direction from circle center to particle
       const nx = dx / dist;
@@ -146,14 +150,121 @@ export class DustParticle {
       }
     }
     
-    // Collision buffer: prevent particles from getting within 2 pixels of circle edge
-    // Only apply if particle is inside the buffer (not in repulsion range)
-    const minDist = circle.r + this.size + 2;
-    if (dist < minDist && dist > 0 && (dist < repulsionMin || dist > repulsionMax)) {
+    // Apply collision buffer only if particle is strictly inside the 2px boundary (not at the boundary)
+    if (dist < minDist && dist > 0) {
       const nx = dx / dist;
       const ny = dy / dist;
       this.x = circle.x + nx * minDist;
       this.y = circle.y + ny * minDist;
+    }
+  }
+
+  checkSlideCircleFlow(slide) {
+    const dx = this.x - slide.circleX;
+    const dy = this.y - slide.circleY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Distance from circle edge
+    const edgeDist = dist - slide.circleRadius;
+
+    // Only affect particles within range past the circle edge
+    if (edgeDist < 0 || edgeDist > settings.dustFlowRange) return;
+
+    // Calculate circle velocity from position change along line
+    // Use circleVT (velocity along line) and line direction
+    const lineDx = slide.endX - slide.x;
+    const lineDy = slide.endY - slide.y;
+    const lineLength = Math.sqrt(lineDx * lineDx + lineDy * lineDy);
+    const lineDirX = lineDx / lineLength;
+    const lineDirY = lineDy / lineLength;
+    
+    // Circle velocity in world space
+    const circleVx = slide.circleVT * lineDx;
+    const circleVy = slide.circleVT * lineDy;
+    
+    const circleSpeed = Math.sqrt(circleVx * circleVx + circleVy * circleVy);
+    if (circleSpeed < 0.001) return;
+
+    // Normalized direction from circle to particle (radius direction)
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    // Normalized circle velocity
+    const cvx = circleVx / circleSpeed;
+    const cvy = circleVy / circleSpeed;
+
+    // How "to the side" the particle is relative to motion direction
+    const alignment = nx * cvx + ny * cvy;
+    const sideAmount = 1 - Math.abs(alignment);
+
+    // Tangent direction (perpendicular to radius)
+    const tx1 = -ny;
+    const ty1 = nx;
+
+    // Pick tangent that aligns with circle velocity
+    const dot = tx1 * circleVx + ty1 * circleVy;
+    const sign = dot >= 0 ? -1 : 1;
+
+    const tx = tx1 * sign;
+    const ty = ty1 * sign;
+
+    // Inward direction (toward circle center)
+    const inwardX = -nx;
+    const inwardY = -ny;
+
+    // Blend tangent with inward - more inward as particle gets to the sides
+    const inwardBias = sideAmount * 0.8;
+    const forceX = tx * (1 - inwardBias) + inwardX * inwardBias;
+    const forceY = ty * (1 - inwardBias) + inwardY * inwardBias;
+
+    // Normalize
+    const forceMag = Math.sqrt(forceX * forceX + forceY * forceY);
+    const normForceX = forceX / forceMag;
+    const normForceY = forceY / forceMag;
+
+    // Force falloff: stronger at edge, weaker at range
+    const falloff = 1 - (edgeDist / settings.dustFlowRange);
+
+    // Apply force directly to velocity
+    const force = falloff * settings.dustFlowPower * circleSpeed;
+    this.vx += normForceX * force;
+    this.vy += normForceY * force;
+  }
+
+  checkSlideCircleCollision(slide) {
+    const dx = this.x - slide.circleX;
+    const dy = this.y - slide.circleY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    // Collision buffer: prevent particles from getting within 2 pixels of circle edge
+    const minDist = slide.circleRadius + this.size + 2;
+    
+    // Only apply position-based repulsion if particle is between 2-20px from circle edge
+    const repulsionMin = slide.circleRadius + this.size + 2;
+    const repulsionMax = slide.circleRadius + this.size + 20;
+    
+    // If particle is within repulsion range (2-20px from edge)
+    if (dist >= repulsionMin && dist <= repulsionMax) {
+      // Calculate direction from circle center to particle
+      const nx = dx / dist;
+      const ny = dy / dist;
+      
+      // Calculate repulsion strength - stronger when closer to circle edge
+      const distanceFromEdge = dist - (slide.circleRadius + this.size);
+      const repulsionFactor = 1 - (distanceFromEdge / 18); // 1.0 at 2px, 0.0 at 20px
+      
+      // Apply position repulsion
+      const repulsionDistance = repulsionFactor * settings.dustPositionRepulsion * 20;
+      this.x += nx * repulsionDistance;
+      this.y += ny * repulsionDistance;
+    }
+    
+    // Apply collision buffer
+    if (dist < minDist && dist > 0) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      this.x = slide.circleX + nx * minDist;
+      this.y = slide.circleY + ny * minDist;
     }
   }
 

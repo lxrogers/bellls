@@ -220,6 +220,21 @@
       padding-top: 8px;
       border-top: 1px solid rgba(0,0,0,0.08);
     }
+    #admin-panel .section-header {
+      font-size: 0.65rem;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #9a958d;
+      margin: 16px 0 8px 0;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    #admin-panel .section-header:first-of-type {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
 
     /* Play bar */
     #play-bar {
@@ -293,6 +308,72 @@
       cursor: pointer;
       border: none;
     }
+
+    /* Scene button */
+    #scene-btn {
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.3);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.1s;
+    }
+    #scene-btn:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+    #scene-btn:active {
+      transform: scale(0.95);
+    }
+    #scene-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: #5a554d;
+    }
+    #scene-name {
+      font-size: 13px;
+      color: rgba(90, 85, 77, 0.7);
+      white-space: nowrap;
+      animation: sceneFadeIn 0.4s ease;
+    }
+    @keyframes sceneFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Rotate button */
+    #rotate-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(4px);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 101;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.2s;
+    }
+    #rotate-btn:hover {
+      background: rgba(255, 255, 255, 0.4);
+      transform: scale(1.05);
+    }
+    #rotate-btn:active {
+      transform: scale(0.95);
+    }
+    #rotate-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: #5a554d;
+    }
   </style>
 </head>
 <body>
@@ -305,13 +386,19 @@
     </svg>
   </button>
 
+  <!-- Rotate button -->
+  <button id="rotate-btn" aria-label="Rotate slides">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+    </svg>
+  </button>
+
   <!-- Admin panel (hidden by default) -->
   <div id="admin-panel">
     <h2>controls</h2>
-    <div class="control">
-      <label>circles <span class="value" id="circles-val">9</span></label>
-      <input type="range" id="circles-slider" min="2" max="200" value="9">
-    </div>
+    
+    <!-- General -->
+    <div class="section-header">General</div>
     <div class="control">
       <label>scale</label>
       <select id="scale-select">
@@ -320,6 +407,7 @@
         <option value="whole-tone">Whole Tone</option>
         <option value="dorian">D Dorian</option>
         <option value="miyako-bushi">Japanese (In Sen)</option>
+        <option value="sadge">Sadge</option>
       </select>
     </div>
     <div class="control">
@@ -327,7 +415,7 @@
       <select id="theme-select">
         <option value="warm">Warm Sand</option>
         <option value="aquatic">Aquatic</option>
-        <option value="dark">Midnight</option>
+        <option value="dark" selected>Midnight</option>
         <option value="blossom">Blossom</option>
       </select>
     </div>
@@ -340,12 +428,16 @@
       <input type="range" id="room-slider" min="0" max="100" value="50">
     </div>
     <div class="control">
-      <label>velocity <span class="value" id="velocity-val">0.20</span></label>
-      <input type="range" id="velocity-slider" min="5" max="400" value="20">
+      <label>
+        <input type="checkbox" id="grid-toggle">
+        Show grid
+      </label>
     </div>
     <div class="control">
-      <label>radius mult <span class="value" id="radius-val">1.50</span></label>
-      <input type="range" id="radius-slider" min="50" max="200" value="150">
+      <label>
+        <input type="checkbox" id="solid-ripples-toggle" checked>
+        Solid ripples
+      </label>
     </div>
     <div class="control">
       <label>ripple expand <span class="value" id="ripple-expand-val">0.9</span></label>
@@ -355,42 +447,54 @@
       <label>ripple fade <span class="value" id="ripple-fade-val">0.1</span></label>
       <input type="range" id="ripple-fade-slider" min="1" max="50" value="1">
     </div>
+    
+    <!-- Slides -->
+    <div class="section-header">Slides</div>
     <div class="control">
-      <label>dust count <span class="value" id="dust-count-val">50</span></label>
+      <label>count <span class="value" id="slides-val">11</span></label>
+      <input type="range" id="slides-slider" min="1" max="20" value="11">
+    </div>
+    <div class="control">
+      <label>length <span class="value" id="slide-length-val">66%</span></label>
+      <input type="range" id="slide-length-slider" min="10" max="90" value="66">
+    </div>
+    <div class="control">
+      <label>spacing <span class="value" id="slide-spacing-val">25%</span></label>
+      <input type="range" id="slide-spacing-slider" min="10" max="100" value="25">
+    </div>
+    <div class="control">
+      <label>radius <span class="value" id="slide-radius-val">10</span></label>
+      <input type="range" id="slide-radius-slider" min="2" max="50" value="10">
+    </div>
+    
+    <!-- Dust -->
+    <div class="section-header">Dust</div>
+    <div class="control">
+      <label>count <span class="value" id="dust-count-val">50</span></label>
       <input type="range" id="dust-count-slider" min="0" max="500" value="50">
     </div>
     <div class="control">
-      <label>dust velocity <span class="value" id="dust-vel-val">0.20</span></label>
+      <label>velocity <span class="value" id="dust-vel-val">0.20</span></label>
       <input type="range" id="dust-vel-slider" min="0" max="100" value="20">
     </div>
     <div class="control">
-      <label>dust power <span class="value" id="dust-power-val">0.0140</span></label>
+      <label>flow power <span class="value" id="dust-power-val">0.0140</span></label>
       <input type="range" id="dust-power-slider" min="1" max="500" value="140">
     </div>
     <div class="control">
-      <label>dust range <span class="value" id="dust-range-val">75</span></label>
+      <label>flow range <span class="value" id="dust-range-val">75</span></label>
       <input type="range" id="dust-range-slider" min="1" max="100" value="75">
     </div>
     <div class="control">
-      <label>dust buffer <span class="value" id="dust-buffer-val">15</span></label>
+      <label>buffer <span class="value" id="dust-buffer-val">15</span></label>
       <input type="range" id="dust-buffer-slider" min="0" max="30" value="15">
     </div>
     <div class="control">
-      <label>dust repulsion <span class="value" id="dust-repulsion-val">0.0100</span></label>
+      <label>repulsion <span class="value" id="dust-repulsion-val">0.0100</span></label>
       <input type="range" id="dust-repulsion-slider" min="0" max="10000" value="1000">
     </div>
     <div class="control">
-      <label>dust repulsion <span class="value" id="dust-repulsion-val">0.0001</span></label>
-      <input type="range" id="dust-repulsion-slider" min="0" max="10000" value="10">
-    </div>
-    <div class="control">
-      <label>
-        <input type="checkbox" id="dust-radial-toggle" checked>
-        Enable radial force
-      </label>
-    </div>
-    <div class="control">
-      <label>dust decay <span class="value" id="dust-decay-val">0.95</span></label>
+      <label>decay <span class="value" id="dust-decay-val">0.95</span></label>
       <input type="range" id="dust-decay-slider" min="80" max="99" value="95">
     </div>
     <div class="control">
@@ -401,6 +505,28 @@
       <label>field scale <span class="value" id="field-scale-val">0.005</span></label>
       <input type="range" id="field-scale-slider" min="1" max="50" value="5">
     </div>
+    
+    <!-- Old Circles -->
+    <div class="section-header">Old Circles</div>
+    <div class="control">
+      <label>
+        <input type="checkbox" id="circles-toggle">
+        Enable circles
+      </label>
+    </div>
+    <div class="control">
+      <label>count <span class="value" id="circles-val">9</span></label>
+      <input type="range" id="circles-slider" min="2" max="200" value="9">
+    </div>
+    <div class="control">
+      <label>velocity <span class="value" id="velocity-val">0.20</span></label>
+      <input type="range" id="velocity-slider" min="5" max="400" value="20">
+    </div>
+    <div class="control">
+      <label>radius mult <span class="value" id="radius-val">1.50</span></label>
+      <input type="range" id="radius-slider" min="50" max="200" value="150">
+    </div>
+    
     <div class="control perf">
       <span id="fps-display">-- fps</span>
     </div>
@@ -417,6 +543,12 @@
       </svg>
     </button>
     <input type="range" id="playbar-volume" min="0" max="100" value="70" aria-label="Volume">
+    <button id="scene-btn" aria-label="New scene">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.18 1.42-1.42zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+      </svg>
+    </button>
+    <span id="scene-name"></span>
   </div>
 
   <div id="start-overlay">

@@ -1,6 +1,6 @@
 import { settings } from '../settings.js';
 import { getTheme } from '../themes.js';
-import { app, circles, ripples, dustParticles, started } from './pixi-app.js';
+import { app, circles, ripples, dustParticles, slides, started } from './pixi-app.js';
 import * as camera from './camera.js';
 import { updateFlowTime } from '../utils/flow-field.js';
 
@@ -46,10 +46,28 @@ export function physicsLoop() {
     for (const circle of circles) {
       dust.checkCircleFlow(circle);
     }
+    // Check slide circle flow
+    for (const slide of slides) {
+      dust.checkSlideCircleFlow(slide);
+    }
     for (const circle of circles) {
       dust.checkCircleCollision(circle);
     }
+    // Check slide circle collisions
+    for (const slide of slides) {
+      dust.checkSlideCircleCollision(slide);
+    }
     dust.update();
+  }
+
+  // Update slides
+  for (const slide of slides) {
+    slide.update();
+  }
+  
+  // Update slide rotation animation
+  if (typeof window.updateSlideRotation === 'function') {
+    window.updateSlideRotation();
   }
 
   // Remove dead ripples
@@ -131,7 +149,7 @@ export function gameLoop() {
   // Draw diamond grid pattern
   const grid = app.gridGraphics;
   grid.clear();
-  if (camera.gridOpacity > 0.001) {
+  if (settings.gridEnabled && camera.gridOpacity > 0.001) {
     grid.lineStyle(1.5, getTheme().grid, camera.gridOpacity);
     const w = app.screen.width;
     const h = app.screen.height;
@@ -177,6 +195,11 @@ export function gameLoop() {
   // Draw circles
   for (const c of circles) {
     c.draw();
+  }
+
+  // Draw slides
+  for (const slide of slides) {
+    slide.draw();
   }
 
   // FPS display

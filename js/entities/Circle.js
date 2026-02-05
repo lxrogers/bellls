@@ -226,3 +226,10 @@ export function createCircles() {
     circles.push(new Circle(x, y, radius, noteIndex, getTheme().palette[i % getTheme().palette.length]));
   }
 }
+
+export function destroyAllCircles() {
+  while (circles.length > 0) {
+    const c = circles.pop();
+    c.destroy();
+  }
+}

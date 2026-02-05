@@ -62,7 +62,7 @@ export const themes = {
   }
 };
 
-export let currentTheme = 'warm';
+export let currentTheme = 'dark';
 
 export function applyTheme(themeName, app, circles) {
   currentTheme = themeName;

@@ -2,14 +2,26 @@ import { settings } from '../settings.js';
 import { applyTheme } from '../themes.js';
 import { updateRoomSize, updateVolume, setCurrentScale } from '../audio/index.js';
 import { app, circles } from '../engine/pixi-app.js';
-import { createCircles } from '../entities/Circle.js';
+import { createCircles, destroyAllCircles } from '../entities/Circle.js';
 import { createDustParticles } from '../entities/DustParticle.js';
+import { createSlides } from '../entities/Slide.js';
 
 export function setupAdminPanel() {
+  document.getElementById('circles-toggle').addEventListener('change', (e) => {
+    settings.circlesEnabled = e.target.checked;
+    if (settings.circlesEnabled) {
+      createCircles();
+    } else {
+      destroyAllCircles();
+    }
+  });
+
   document.getElementById('circles-slider').addEventListener('input', (e) => {
     settings.numCircles = parseInt(e.target.value);
     document.getElementById('circles-val').textContent = settings.numCircles;
-    createCircles();
+    if (settings.circlesEnabled) {
+      createCircles();
+    }
   });
 
   document.getElementById('scale-select').addEventListener('change', (e) => {
@@ -87,6 +99,38 @@ export function setupAdminPanel() {
   document.getElementById('dust-repulsion-slider').addEventListener('input', (e) => {
     settings.dustPositionRepulsion = parseInt(e.target.value) / 100000;
     document.getElementById('dust-repulsion-val').textContent = settings.dustPositionRepulsion.toFixed(6);
+  });
+
+  document.getElementById('slides-slider').addEventListener('input', (e) => {
+    settings.numSlides = parseInt(e.target.value);
+    document.getElementById('slides-val').textContent = settings.numSlides;
+    createSlides();
+  });
+
+  document.getElementById('slide-length-slider').addEventListener('input', (e) => {
+    settings.slideLength = parseInt(e.target.value);
+    document.getElementById('slide-length-val').textContent = settings.slideLength + '%';
+    createSlides();
+  });
+
+  document.getElementById('slide-spacing-slider').addEventListener('input', (e) => {
+    settings.slideSpacing = parseInt(e.target.value);
+    document.getElementById('slide-spacing-val').textContent = settings.slideSpacing + '%';
+    createSlides();
+  });
+
+  document.getElementById('slide-radius-slider').addEventListener('input', (e) => {
+    settings.slideRadius = parseInt(e.target.value);
+    document.getElementById('slide-radius-val').textContent = settings.slideRadius;
+    createSlides();
+  });
+
+  document.getElementById('grid-toggle').addEventListener('change', (e) => {
+    settings.gridEnabled = e.target.checked;
+  });
+
+  document.getElementById('solid-ripples-toggle').addEventListener('change', (e) => {
+    settings.solidRipples = e.target.checked;
   });
 
   document.getElementById('dust-decay-slider').addEventListener('input', (e) => {

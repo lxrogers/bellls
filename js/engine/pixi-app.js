@@ -1,8 +1,5 @@
 import { getTheme } from '../themes.js';
 import * as camera from './camera.js';
-// PixiJS is loaded via CDN in index.html, so we need to access it from the global scope
-// We'll use the global PIXI object instead of ES6 imports
-// import { BlurFilter } from 'pixi.js';
 
 // PixiJS Application instance
 export let app = null;
@@ -11,11 +8,13 @@ export let app = null;
 export let circleContainer = null;
 export let rippleContainer = null;
 export let dustContainer = null;
+export let slideContainer = null;
 
 // Shared entity arrays
 export const circles = [];
 export const ripples = [];
 export const dustParticles = [];
+export const slides = [];
 
 // Application state
 export let started = false;
@@ -51,6 +50,7 @@ export async function initPixi() {
   rippleContainer = new PIXI.Container();
   dustContainer = new PIXI.Container();
   circleContainer = new PIXI.Container();
+  slideContainer = new PIXI.Container();
   const boundsOverlay = new PIXI.Container();
 
   // Grid pattern (for follow mode)
@@ -71,6 +71,7 @@ export async function initPixi() {
   app.stage.addChild(rippleContainer);
   app.stage.addChild(dustContainer);
   app.stage.addChild(circleContainer);
+  app.stage.addChild(slideContainer);
   app.stage.addChild(boundsOverlay);
 
   // Handle resize

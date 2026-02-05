@@ -19,6 +19,10 @@ export const scales = {
   'miyako-bushi': {
     name: 'Japanese (In Sen)',
     notes: ['D2', 'Eb2', 'G2', 'A2', 'C3', 'D3', 'Eb3', 'G3', 'A3', 'C4', 'D4', 'Eb4', 'G4', 'A4', 'C5']
+  },
+  'sadge': {
+    name: 'Sadge',
+    notes: ['C3', 'D3', 'G3', 'A#3', 'D4', 'F4', 'A5', 'C5', 'D5', 'E5', 'F5', 'C6', 'E6', 'A6']
   }
 };
 
