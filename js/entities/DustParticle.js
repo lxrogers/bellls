@@ -2,7 +2,7 @@ import { settings } from '../settings.js';
 import { flowNoise, flowTime } from '../utils/flow-field.js';
 import { app, dustParticles, dustContainer, circles, slides } from '../engine/pixi-app.js';
 import * as camera from '../engine/camera.js';
-import { gust } from './Hanger.js';
+import { getGustForce } from './Hanger.js';
 
 export class DustParticle {
   constructor(x, y) {
@@ -44,13 +44,10 @@ export class DustParticle {
     this.vx *= 0.995;
     this.vy *= 0.995;
 
-    // Apply gust (lighter than hangers)
-    if (gust.active) {
-      const t = gust.elapsed / gust.duration;
-      const strength = Math.sin(Math.PI * t) * gust.magnitude * 0.3;
-      this.vx += Math.cos(gust.direction) * strength;
-      this.vy += Math.sin(gust.direction) * strength;
-    }
+    // Apply gust (position-aware for travelling effect)
+    const gustForce = getGustForce(1.5, this.x, this.y);
+    this.vx += gustForce.x;
+    this.vy += gustForce.y;
 
     // Update position
     this.x += this.vx;

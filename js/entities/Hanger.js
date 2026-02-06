@@ -14,6 +14,9 @@ export const gust = {
   duration: 120,      // frames (2 seconds at 60fps)
   elapsed: 0,
   autoMagnitude: 0,   // override for auto-gusts
+  originX: 0,         // wavefront start position
+  originY: 0,
+  travelSpeed: 0,     // pixels per frame the wavefront moves
 };
 
 let framesSinceLastNote = 0;
@@ -27,6 +30,18 @@ export function triggerGust() {
   gust.active = true;
   gust.elapsed = 0;
   gust.autoMagnitude = 0; // clear auto override for manual gusts
+
+  // Compute wavefront origin — opposite edge of the screen from gust direction
+  const w = app.screen.width;
+  const h = app.screen.height;
+  const cosD = Math.cos(gust.direction);
+  const sinD = Math.sin(gust.direction);
+  // Origin is the edge the wind blows FROM
+  gust.originX = cosD >= 0 ? 0 : w;
+  gust.originY = sinD >= 0 ? 0 : h;
+  // Wavefront crosses screen in ~60% of the gust duration
+  const screenSpan = Math.abs(cosD) * w + Math.abs(sinD) * h;
+  gust.travelSpeed = screenSpan / (gust.duration * 0.6);
 }
 
 export function updateGust() {
@@ -50,14 +65,23 @@ export function updateGust() {
   }
 }
 
-function getGustForce(multiplier) {
+export function getGustForce(multiplier, x, y) {
   if (!gust.active) return { x: 0, y: 0 };
-  const t = gust.elapsed / gust.duration;
+
+  // Project entity position onto gust direction to get travel delay
+  const cosD = Math.cos(gust.direction);
+  const sinD = Math.sin(gust.direction);
+  const projDist = (x - gust.originX) * cosD + (y - gust.originY) * sinD;
+  const delay = projDist / gust.travelSpeed; // frames until wavefront reaches this point
+
+  const localT = (gust.elapsed - delay) / gust.duration;
+  if (localT < 0 || localT > 1) return { x: 0, y: 0 };
+
   const mag = gust.autoMagnitude || gust.magnitude;
-  const strength = Math.sin(Math.PI * t) * mag * multiplier;
+  const strength = Math.sin(Math.PI * localT) * mag * multiplier;
   return {
-    x: Math.cos(gust.direction) * strength,
-    y: Math.sin(gust.direction) * strength,
+    x: cosD * strength,
+    y: sinD * strength,
   };
 }
 
@@ -73,11 +97,11 @@ class VerletPoint {
     this.mass = mass;
   }
 
-  update(gravity, friction, gustMultiplier) {
+  update(gravity, friction, gustMultiplier, anchorX, anchorY) {
     if (this.pinned) return;
     const vx = (this.x - this.oldX) * friction;
     const vy = (this.y - this.oldY) * friction;
-    const gustForce = getGustForce(gustMultiplier);
+    const gustForce = getGustForce(gustMultiplier, anchorX, anchorY);
     this.oldX = this.x;
     this.oldY = this.y;
     this.x += vx + gustForce.x;
@@ -172,9 +196,10 @@ export class Hanger {
     const friction = settings.hangerDamping;
     const constraintIterations = 8;
 
-    // Update all points
+    // Update all points (use anchor position for gust wavefront timing)
+    const anchor = this.points[0];
     for (const p of this.points) {
-      p.update(gravity, friction, this.gustMultiplier);
+      p.update(gravity, friction, this.gustMultiplier, anchor.x, anchor.y);
     }
 
     // Solve constraints multiple times for stability
