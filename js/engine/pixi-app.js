@@ -24,7 +24,7 @@ export let started = false;
 // Screen scale factor for responsive sizing (1.0 at 1000px, scales down on smaller screens)
 export function getScreenScale() {
   const minDim = Math.min(window.innerWidth, window.innerHeight);
-  return Math.max(0.4, minDim / 1000);
+  return Math.max(0.6, minDim / 1000);
 }
 
 export function setStarted(value) {

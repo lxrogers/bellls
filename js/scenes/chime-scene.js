@@ -142,8 +142,12 @@ export function generateScene(forceEntityType = null) {
       break;
   }
 
-  // Slide rotation: weighted toward 0
-  const slideRotation = pick([-30, -15, -10, 0, 0, 0, 10, 15, 30]);
+  // Slide rotation: weighted toward 0, constrained on narrow screens
+  const aspect = window.innerWidth / window.innerHeight;
+  const slideRotationOptions = aspect < 0.7
+    ? [-15, -10, 0, 0, 0, 10, 15]
+    : [-30, -15, -10, 0, 0, 0, 10, 15, 30];
+  const slideRotation = pick(slideRotationOptions);
   const gridEnabled = Math.random() < 0.3;
 
   return {

@@ -209,6 +209,22 @@ function checkAutoRotation() {
   }
 }
 
+// Max tilt from vertical based on screen size (narrow screens get less rotation)
+function getMaxTilt() {
+  const aspect = app.screen.width / app.screen.height;
+  if (aspect < 0.7) return 30;  // Phone portrait: ±30°
+  if (aspect < 1.0) return 45;  // Tablet portrait: ±45°
+  return 180;                   // Landscape/desktop: unrestricted
+}
+
+// Normalize angle to [-180, 180] degrees
+function normalizeDegrees(deg) {
+  deg = deg % 360;
+  if (deg > 180) deg -= 360;
+  if (deg < -180) deg += 360;
+  return deg;
+}
+
 // Start rotation animation
 export function rotateSlides(auto = false) {
   if (rotationAnimation) return; // Don't start if already animating
@@ -216,10 +232,25 @@ export function rotateSlides(auto = false) {
   const centerX = app.screen.width / 2;
   const centerY = app.screen.height / 2 - 50; // Match the -50px vertical offset from createSlides
 
+  const maxTilt = getMaxTilt();
+  const currentDeg = normalizeDegrees(currentRotation * (180 / Math.PI));
+
   let rotationAmount, duration;
   if (auto) {
     // Auto-rotation: 90-180 degrees
-    const degrees = 90 + Math.floor(Math.random() * 4) * 30; // 90, 120, 150, or 180
+    let degrees = 90 + Math.floor(Math.random() * 4) * 30; // 90, 120, 150, or 180
+    // Constrain so final angle stays within maxTilt of vertical (0° or 180°)
+    if (maxTilt < 180) {
+      const targetDeg = normalizeDegrees(currentDeg + degrees);
+      // Find nearest vertical: 0° or ±180°
+      const distFrom0 = Math.abs(targetDeg);
+      const distFrom180 = Math.abs(Math.abs(targetDeg) - 180);
+      const distFromVertical = Math.min(distFrom0, distFrom180);
+      if (distFromVertical > maxTilt) {
+        // Snap to 180° rotation instead (returns to near-vertical)
+        degrees = 180;
+      }
+    }
     rotationAmount = degrees * (Math.PI / 180);
     duration = (degrees / 30) * 1500;
   } else {
