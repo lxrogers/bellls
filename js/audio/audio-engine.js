@@ -100,6 +100,7 @@ export async function initAudio() {
     voicePools[instName] = [];
     voiceIndices[instName] = 0;
 
+    let loadedCount = 0;
     for (let i = 0; i < VOICE_POOL_SIZE; i++) {
       const panner = new Tone.Panner(0).connect(delay);
       const sampler = new Tone.Sampler({
@@ -107,8 +108,9 @@ export async function initAudio() {
         baseUrl: config.baseUrl,
         release: 4,
         onload: () => {
-          if (i === 0) {
-            console.log(`${instName} loaded`);
+          loadedCount++;
+          if (loadedCount === VOICE_POOL_SIZE) {
+            console.log(`${instName} loaded (${VOICE_POOL_SIZE} voices)`);
             instrumentsLoaded++;
             if (instrumentsLoaded >= totalInstruments) audioReady = true;
           }
