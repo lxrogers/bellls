@@ -2,6 +2,7 @@ import { settings } from '../settings.js';
 import { flowNoise, flowTime } from '../utils/flow-field.js';
 import { app, dustParticles, dustContainer, circles, slides } from '../engine/pixi-app.js';
 import * as camera from '../engine/camera.js';
+import { gust } from './Hanger.js';
 
 export class DustParticle {
   constructor(x, y) {
@@ -43,15 +44,25 @@ export class DustParticle {
     this.vx *= 0.995;
     this.vy *= 0.995;
 
+    // Apply gust (lighter than hangers)
+    if (gust.active) {
+      const t = gust.elapsed / gust.duration;
+      const strength = Math.sin(Math.PI * t) * gust.magnitude * 0.3;
+      this.vx += Math.cos(gust.direction) * strength;
+      this.vy += Math.sin(gust.direction) * strength;
+    }
+
     // Update position
     this.x += this.vx;
     this.y += this.vy;
 
-    // Wall bounce
-    if (this.x < 0) { this.x = 0; this.vx *= -0.5; }
-    if (this.x > app.screen.width) { this.x = app.screen.width; this.vx *= -0.5; }
-    if (this.y < 0) { this.y = 0; this.vy *= -0.5; }
-    if (this.y > app.screen.height) { this.y = app.screen.height; this.vy *= -0.5; }
+    // Screen wrap
+    const w = app.screen.width;
+    const h = app.screen.height;
+    if (this.x < 0) this.x += w;
+    else if (this.x > w) this.x -= w;
+    if (this.y < 0) this.y += h;
+    else if (this.y > h) this.y -= h;
   }
 
   checkCircleFlow(circle) {
@@ -144,10 +155,6 @@ export class DustParticle {
       this.x += nx * repulsionDistance;
       this.y += ny * repulsionDistance;
       
-      // Debug: Log the repulsion effect when it occurs
-      if (settings.dustPositionRepulsion > 0.05 && repulsionFactor > 0.8) {
-        console.log(`Repulsion: distance=${dist.toFixed(2)}, factor=${repulsionFactor.toFixed(2)}, distance=${repulsionDistance.toFixed(3)}`);
-      }
     }
     
     // Apply collision buffer only if particle is strictly inside the 2px boundary (not at the boundary)
@@ -265,6 +272,61 @@ export class DustParticle {
       const ny = dy / dist;
       this.x = slide.circleX + nx * minDist;
       this.y = slide.circleY + ny * minDist;
+    }
+  }
+
+  checkHangerFlow(hanger) {
+    const tip = hanger.tip;
+    const dx = this.x - tip.x;
+    const dy = this.y - tip.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const edgeDist = dist - hanger.circleRadius;
+    if (edgeDist < 0 || edgeDist > settings.dustFlowRange) return;
+
+    // Tip velocity from verlet
+    const tipVx = tip.x - tip.oldX;
+    const tipVy = tip.y - tip.oldY;
+    const tipSpeed = Math.sqrt(tipVx * tipVx + tipVy * tipVy);
+    if (tipSpeed < 0.001) return;
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const tx = -ny;
+    const ty = nx;
+    const dot = tx * tipVx + ty * tipVy;
+    const sign = dot >= 0 ? -1 : 1;
+
+    const falloff = 1 - (edgeDist / settings.dustFlowRange);
+    const force = falloff * settings.dustFlowPower * tipSpeed;
+    this.vx += tx * sign * force;
+    this.vy += ty * sign * force;
+  }
+
+  checkHangerCollision(hanger) {
+    const tip = hanger.tip;
+    const dx = this.x - tip.x;
+    const dy = this.y - tip.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    const minDist = hanger.circleRadius + this.size + 2;
+    const repulsionMin = hanger.circleRadius + this.size + 2;
+    const repulsionMax = hanger.circleRadius + this.size + 20;
+
+    if (dist >= repulsionMin && dist <= repulsionMax) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const distanceFromEdge = dist - (hanger.circleRadius + this.size);
+      const repulsionFactor = 1 - (distanceFromEdge / 18);
+      const repulsionDistance = repulsionFactor * settings.dustPositionRepulsion * 20;
+      this.x += nx * repulsionDistance;
+      this.y += ny * repulsionDistance;
+    }
+
+    if (dist < minDist && dist > 0) {
+      const nx = dx / dist;
+      const ny = dy / dist;
+      this.x = tip.x + nx * minDist;
+      this.y = tip.y + ny * minDist;
     }
   }
 

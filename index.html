@@ -29,7 +29,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(245, 240, 232, 0.97);
+      background: #f5f0e8;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -42,7 +42,7 @@
       color: #3a3632;
       font-family: Georgia, 'Times New Roman', serif;
       font-weight: 400;
-      font-size: 1.8rem;
+      font-size: 2.8rem;
       letter-spacing: 0.15em;
       transition: transform 0.6s ease-out;
       z-index: 2;
@@ -53,49 +53,13 @@
       width: 120%;
       height: 200px;
       left: -10%;
-      top: calc(50% + -21px);
+      top: calc(50% + -29px);
       transition: transform 0.6s ease-out;
       z-index: 3;
     }
     #wave-canvas {
       width: 100%;
       height: 100%;
-    }
-    #submerge-control {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      align-items: center;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 0.75rem;
-      color: #5a554d;
-    }
-    #submerge-control label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    #submerge-control input[type="range"] {
-      width: 120px;
-      height: 4px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: rgba(0, 0, 0, 0.15);
-      border-radius: 2px;
-      outline: none;
-    }
-    #submerge-control input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
-      background: #3a3632;
-      border-radius: 50%;
-      cursor: pointer;
     }
 
     /* Settings gear button */
@@ -134,13 +98,13 @@
       position: fixed;
       top: 74px;
       right: 20px;
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(4px);
+      background: rgba(20, 20, 30, 0.85);
+      backdrop-filter: blur(8px);
       border-radius: 12px;
       padding: 16px 20px;
       font-family: Georgia, 'Times New Roman', serif;
       font-size: 0.8rem;
-      color: #5a554d;
+      color: #b0aaa0;
       z-index: 100;
       min-width: 180px;
       display: none;
@@ -156,7 +120,7 @@
       text-transform: uppercase;
       letter-spacing: 0.15em;
       margin: 0 0 12px 0;
-      color: #7a756d;
+      color: #8a8a9a;
     }
     #admin-panel .control {
       margin-bottom: 12px;
@@ -174,7 +138,7 @@
       height: 4px;
       -webkit-appearance: none;
       appearance: none;
-      background: rgba(0, 0, 0, 0.1);
+      background: rgba(255, 255, 255, 0.12);
       border-radius: 2px;
       outline: none;
     }
@@ -183,21 +147,21 @@
       appearance: none;
       width: 14px;
       height: 14px;
-      background: #8b7355;
+      background: #8a8a9a;
       border-radius: 50%;
       cursor: pointer;
     }
     #admin-panel input[type="range"]::-moz-range-thumb {
       width: 14px;
       height: 14px;
-      background: #8b7355;
+      background: #8a8a9a;
       border-radius: 50%;
       cursor: pointer;
       border: none;
     }
     #admin-panel .value {
       font-size: 0.7rem;
-      color: #9a958d;
+      color: #7a7a8a;
       float: right;
     }
     #admin-panel select {
@@ -205,35 +169,75 @@
       padding: 4px 6px;
       font-family: Georgia, 'Times New Roman', serif;
       font-size: 0.75rem;
-      border: 1px solid rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 4px;
-      background: rgba(255,255,255,0.5);
-      color: #5a554d;
+      background: rgba(255,255,255,0.08);
+      color: #b0aaa0;
       cursor: pointer;
       margin-top: 4px;
     }
     #admin-panel .perf {
       font-size: 0.65rem;
-      color: #9a958d;
+      color: #7a7a8a;
       font-family: monospace;
       margin-top: 8px;
       padding-top: 8px;
-      border-top: 1px solid rgba(0,0,0,0.08);
+      border-top: 1px solid rgba(255,255,255,0.08);
     }
     #admin-panel .section-header {
       font-size: 0.65rem;
       font-weight: 400;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #9a958d;
+      color: #7a7a8a;
       margin: 16px 0 8px 0;
       padding-top: 12px;
-      border-top: 1px solid rgba(0,0,0,0.08);
+      border-top: 1px solid rgba(255,255,255,0.08);
     }
     #admin-panel .section-header:first-of-type {
       margin-top: 0;
       padding-top: 0;
       border-top: none;
+    }
+    .gust-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .gust-params {
+      flex: 1;
+    }
+    .gust-params label {
+      font-size: 0.7rem;
+      margin-bottom: 2px;
+    }
+    .gust-params input[type="range"] {
+      margin-bottom: 6px;
+    }
+    #gust-dial {
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #gust-btn {
+      width: 100%;
+      padding: 6px 0;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 0.75rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: #b0aaa0;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #gust-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+    #gust-btn:active {
+      transform: scale(0.98);
     }
 
     /* Play bar */
@@ -242,8 +246,8 @@
       bottom: 32px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(4px);
+      background: rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(8px);
       border-radius: 28px;
       padding: 12px 24px;
       display: none;
@@ -344,36 +348,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Rotate button */
-    #rotate-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 44px;
-      height: 44px;
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(4px);
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      z-index: 101;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s, transform 0.2s;
-    }
-    #rotate-btn:hover {
-      background: rgba(255, 255, 255, 0.4);
-      transform: scale(1.05);
-    }
-    #rotate-btn:active {
-      transform: scale(0.95);
-    }
-    #rotate-btn svg {
-      width: 22px;
-      height: 22px;
-      fill: #5a554d;
-    }
   </style>
 </head>
 <body>
@@ -383,13 +357,6 @@
   <button id="settings-btn" aria-label="Settings">
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-    </svg>
-  </button>
-
-  <!-- Rotate button -->
-  <button id="rotate-btn" aria-label="Rotate slides">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
     </svg>
   </button>
 
@@ -404,9 +371,6 @@
       <select id="scale-select">
         <option value="pentatonic-d">D Major Pentatonic</option>
         <option value="pentatonic-a-minor">A Minor Pentatonic</option>
-        <option value="whole-tone">Whole Tone</option>
-        <option value="dorian">D Dorian</option>
-        <option value="miyako-bushi">Japanese (In Sen)</option>
         <option value="sadge">Sadge</option>
       </select>
     </div>
@@ -417,6 +381,19 @@
         <option value="aquatic">Aquatic</option>
         <option value="dark" selected>Midnight</option>
         <option value="blossom">Blossom</option>
+        <option value="crimson-ink">Crimson Ink</option>
+        <option value="orchid">Orchid</option>
+        <option value="flamingo">Flamingo</option>
+        <option value="fairy">Fairy</option>
+        <option value="rose">Rose Garden</option>
+        <option value="lavender">Lavender Dream</option>
+        <option value="coral">Soft Coral</option>
+        <option value="candy">Candy</option>
+        <option value="neon-depths">Neon Depths</option>
+        <option value="violet-dusk">Violet Dusk</option>
+        <option value="wine">Wine</option>
+        <option value="ember">Ember</option>
+        <option value="berry">Berry Crush</option>
       </select>
     </div>
     <div class="control">
@@ -440,12 +417,12 @@
       </label>
     </div>
     <div class="control">
-      <label>ripple expand <span class="value" id="ripple-expand-val">0.9</span></label>
-      <input type="range" id="ripple-expand-slider" min="1" max="100" value="9">
+      <label>ripple expand <span class="value" id="ripple-expand-val">0.6</span></label>
+      <input type="range" id="ripple-expand-slider" min="1" max="7" value="6">
     </div>
     <div class="control">
-      <label>ripple fade <span class="value" id="ripple-fade-val">0.1</span></label>
-      <input type="range" id="ripple-fade-slider" min="1" max="50" value="1">
+      <label>ripple fade <span class="value" id="ripple-fade-val">1.7</span></label>
+      <input type="range" id="ripple-fade-slider" min="1" max="50" value="17">
     </div>
     
     <!-- Slides -->
@@ -467,6 +444,60 @@
       <input type="range" id="slide-radius-slider" min="2" max="50" value="10">
     </div>
     
+    <!-- Hangers -->
+    <div class="section-header">Hangers</div>
+    <div class="control">
+      <label>count <span class="value" id="hangers-val">8</span></label>
+      <input type="range" id="hangers-slider" min="1" max="30" value="8">
+    </div>
+    <div class="control">
+      <label>length <span class="value" id="hanger-length-val">40%</span></label>
+      <input type="range" id="hanger-length-slider" min="10" max="70" value="40">
+    </div>
+    <div class="control">
+      <label>spacing <span class="value" id="hanger-spacing-val">50%</span></label>
+      <input type="range" id="hanger-spacing-slider" min="10" max="100" value="50">
+    </div>
+    <div class="control">
+      <label>radius <span class="value" id="hanger-radius-val">12</span></label>
+      <input type="range" id="hanger-radius-slider" min="4" max="30" value="12">
+    </div>
+    <div class="control">
+      <label>gravity <span class="value" id="hanger-gravity-val">0.15</span></label>
+      <input type="range" id="hanger-gravity-slider" min="1" max="100" value="15">
+    </div>
+    <div class="control">
+      <label>tip weight <span class="value" id="hanger-weight-val">3.0</span></label>
+      <input type="range" id="hanger-weight-slider" min="10" max="100" value="30">
+    </div>
+    <div class="control">
+      <label>damping <span class="value" id="hanger-damping-val">0.999</span></label>
+      <input type="range" id="hanger-damping-slider" min="950" max="999" value="999">
+    </div>
+    <div class="control">
+      <label>bounce <span class="value" id="hanger-bounce-val">0.70</span></label>
+      <input type="range" id="hanger-bounce-slider" min="0" max="100" value="70">
+    </div>
+    <div class="control">
+      <label>min impact <span class="value" id="hanger-impact-val">0.10</span></label>
+      <input type="range" id="hanger-impact-slider" min="0" max="100" value="10">
+    </div>
+
+    <!-- Gust -->
+    <div class="section-header">Gust</div>
+    <div class="control gust-control">
+      <div class="gust-row">
+        <canvas id="gust-dial" width="64" height="64"></canvas>
+        <div class="gust-params">
+          <label>magnitude <span class="value" id="gust-mag-val">0.10</span></label>
+          <input type="range" id="gust-mag-slider" min="1" max="200" value="100">
+          <label>duration <span class="value" id="gust-dur-val">2.0s</span></label>
+          <input type="range" id="gust-dur-slider" min="30" max="360" value="120">
+        </div>
+      </div>
+      <button id="gust-btn">gust</button>
+    </div>
+
     <!-- Dust -->
     <div class="section-header">Dust</div>
     <div class="control">
@@ -528,7 +559,7 @@
     </div>
     
     <div class="control perf">
-      <span id="fps-display">-- fps</span>
+      <span id="fps-display">-- fps</span> &middot; <span id="ripple-count">0 ripples</span>
     </div>
   </div>
 
@@ -552,15 +583,9 @@
   </div>
 
   <div id="start-overlay">
-    <h1>enter bath →</h1>
+    <h1>enter chiiimes →</h1>
     <div id="wave-container">
       <canvas id="wave-canvas"></canvas>
-    </div>
-    <div id="submerge-control">
-      <label>submerge: <span id="submerge-val">6</span></label>
-      <input type="range" id="submerge-slider" min="1" max="150" value="6">
-      <label>wave Y: <span id="wave-y-val">-21</span></label>
-      <input type="range" id="wave-y-slider" min="-50" max="150" value="-21">
     </div>
   </div>
 
@@ -572,30 +597,9 @@
       const overlay = document.getElementById('start-overlay');
       const title = overlay.querySelector('h1');
       const waveContainer = document.getElementById('wave-container');
-      const submergeSlider = document.getElementById('submerge-slider');
-      const submergeVal = document.getElementById('submerge-val');
-      const waveYSlider = document.getElementById('wave-y-slider');
-      const waveYVal = document.getElementById('wave-y-val');
-
       let animationId;
       let time = 0;
-      let submergeAmount = 6;
-      let waveYOffset = -21;
-
-      submergeSlider.addEventListener('input', (e) => {
-        submergeAmount = parseInt(e.target.value);
-        submergeVal.textContent = submergeAmount;
-      });
-
-      waveYSlider.addEventListener('input', (e) => {
-        waveYOffset = parseInt(e.target.value);
-        waveYVal.textContent = waveYOffset;
-        waveContainer.style.top = `calc(50% + ${waveYOffset}px)`;
-      });
-
-      // Prevent slider clicks from triggering the start
-      submergeSlider.addEventListener('click', (e) => e.stopPropagation());
-      waveYSlider.addEventListener('click', (e) => e.stopPropagation());
+      const submergeAmount = 3;
 
       function resize() {
         canvas.width = canvas.offsetWidth;

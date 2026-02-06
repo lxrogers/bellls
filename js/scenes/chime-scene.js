@@ -7,6 +7,7 @@ import { app, circles } from '../engine/pixi-app.js';
 import { createCircles, destroyAllCircles } from '../entities/Circle.js';
 import { createDustParticles } from '../entities/DustParticle.js';
 import { createSlides } from '../entities/Slide.js';
+import { createHangers, destroyAllHangers } from '../entities/Hanger.js';
 import { destroyAllRipples } from '../entities/Ripple.js';
 
 // --- Name generation ---
@@ -46,17 +47,14 @@ function pick(arr) {
 // --- Mood pairings (scale + theme affinity) ---
 
 const moodPairings = [
-  { scales: ['pentatonic-d'],       themes: ['warm', 'blossom'] },
-  { scales: ['pentatonic-a-minor'], themes: ['dark', 'aquatic'] },
-  { scales: ['whole-tone'],         themes: ['aquatic', 'dark'] },
-  { scales: ['dorian'],             themes: ['warm', 'dark'] },
-  { scales: ['miyako-bushi'],       themes: ['dark', 'blossom'] },
-  { scales: ['sadge'],              themes: ['dark', 'aquatic'] },
+  { scales: ['pentatonic-d'],       themes: ['warm', 'blossom', 'flamingo', 'fairy', 'coral', 'candy'] },
+  { scales: ['pentatonic-a-minor'], themes: ['dark', 'aquatic', 'neon-depths', 'violet-dusk', 'orchid'] },
+  { scales: ['sadge'],              themes: ['dark', 'aquatic', 'wine', 'neon-depths', 'ember', 'crimson-ink', 'violet-dusk', 'berry'] },
 ];
 
 // --- Generate ---
 
-export function generateScene() {
+export function generateScene(forceEntityType = null) {
   // Pick scale + theme (80% use mood affinity, 20% fully random)
   let scale, theme;
   if (Math.random() < 0.8) {
@@ -71,81 +69,110 @@ export function generateScene() {
   // Density archetype
   const density = pick(['sparse', 'medium', 'dense']);
 
-  // Either circles OR slides, not both
-  const useCircles = Math.random() < 0.3;
+  // Pick one entity type: circles (20%), slides (40%), hangers (40%)
+  let entityType;
+  if (forceEntityType) {
+    entityType = forceEntityType;
+  } else {
+    const roll = Math.random();
+    entityType = roll < 0.2 ? 'circles' : roll < 0.6 ? 'slides' : 'hangers';
+  }
 
-  let numSlides, slideLength, slideSpacing, slideRadius, dustCount, dustVelocity;
-  let numCircles, baseVelocity, roomSize, rippleExpand, rippleFade, solidRipples;
+  let numSlides, slideLength, slideSpacing, slideRadius;
+  let numCircles, baseVelocity;
+  let numHangers, hangerLength, hangerSpacing, hangerRadius;
+  let dustCount, dustVelocity, roomSize, rippleExpand, rippleFade, solidRipples;
 
   switch (density) {
     case 'sparse':
-      numSlides    = randInt(3, 7);
-      slideLength  = randInt(50, 85);
-      slideSpacing = randInt(20, 50);
-      slideRadius  = randInt(6, 15);
-      dustCount    = randInt(20, 60);
-      dustVelocity = randFloat(0.05, 0.15);
-      numCircles   = randInt(2, 5);
-      baseVelocity = randFloat(0.05, 0.15);
-      roomSize     = randInt(50, 90);
-      rippleExpand = randFloat(0.3, 0.8);
-      rippleFade   = randFloat(0.05, 0.1);
-      solidRipples = Math.random() < 0.6;
+      numSlides      = randInt(5, 7);
+      slideLength    = randInt(50, 85);
+      slideSpacing   = randInt(20, 50);
+      slideRadius    = randInt(6, 15);
+      numCircles     = randInt(7, 10);
+      baseVelocity   = randFloat(0.4, 0.6);
+      numHangers     = randInt(6, 10);
+      hangerLength   = randInt(55, 70);
+      hangerSpacing  = randInt(15, 35);
+      hangerRadius   = randInt(10, 18);
+      dustCount      = randInt(20, 60);
+      dustVelocity   = randFloat(0.05, 0.15);
+      roomSize       = randInt(50, 90);
+      rippleExpand   = randFloat(0.1, 0.4);
+      rippleFade     = randFloat(0.05, 0.1);
+      solidRipples   = Math.random() < 0.6;
       break;
 
     case 'medium':
-      numSlides    = randInt(7, 13);
-      slideLength  = randInt(40, 70);
-      slideSpacing = randInt(20, 40);
-      slideRadius  = randInt(6, 20);
-      dustCount    = randInt(30, 100);
-      dustVelocity = randFloat(0.1, 0.25);
-      numCircles   = randInt(4, 9);
-      baseVelocity = randFloat(0.1, 0.25);
-      roomSize     = randInt(30, 70);
-      rippleExpand = randFloat(0.5, 1.5);
-      rippleFade   = randFloat(0.05, 0.15);
-      solidRipples = Math.random() < 0.5;
+      numSlides      = randInt(7, 13);
+      slideLength    = randInt(40, 70);
+      slideSpacing   = randInt(20, 40);
+      slideRadius    = randInt(6, 20);
+      numCircles     = randInt(8, 16);
+      baseVelocity   = randFloat(0.4, 0.8);
+      numHangers     = randInt(10, 16);
+      hangerLength   = randInt(50, 65);
+      hangerSpacing  = randInt(15, 30);
+      hangerRadius   = randInt(8, 15);
+      dustCount      = randInt(30, 100);
+      dustVelocity   = randFloat(0.1, 0.25);
+      roomSize       = randInt(30, 70);
+      rippleExpand   = randFloat(0.2, 0.5);
+      rippleFade     = randFloat(0.05, 0.15);
+      solidRipples   = Math.random() < 0.5;
       break;
 
     case 'dense':
-      numSlides    = randInt(12, 20);
-      slideLength  = randInt(30, 60);
-      slideSpacing = randInt(30, 80);
-      slideRadius  = randInt(4, 12);
-      dustCount    = randInt(80, 250);
-      dustVelocity = randFloat(0.15, 0.4);
-      numCircles   = randInt(6, 15);
-      baseVelocity = randFloat(0.15, 0.35);
-      roomSize     = randInt(20, 50);
-      rippleExpand = randFloat(0.8, 2.0);
-      rippleFade   = randFloat(0.08, 0.2);
-      solidRipples = Math.random() < 0.4;
+      numSlides      = randInt(12, 20);
+      slideLength    = randInt(30, 60);
+      slideSpacing   = randInt(30, 80);
+      slideRadius    = randInt(4, 12);
+      numCircles     = randInt(12, 25);
+      baseVelocity   = randFloat(0.4, 1.0);
+      numHangers     = randInt(16, 25);
+      hangerLength   = randInt(50, 60);
+      hangerSpacing  = randInt(15, 25);
+      hangerRadius   = randInt(6, 12);
+      dustCount      = randInt(80, 250);
+      dustVelocity   = randFloat(0.15, 0.4);
+      roomSize       = randInt(20, 50);
+      rippleExpand   = randFloat(0.3, 0.7);
+      rippleFade     = randFloat(0.08, 0.2);
+      solidRipples   = Math.random() < 0.4;
       break;
   }
 
-  // Rotation: weighted toward 0
+  // Slide rotation: weighted toward 0
   const slideRotation = pick([-30, -15, -10, 0, 0, 0, 10, 15, 30]);
+  const gridEnabled = Math.random() < 0.3;
 
   return {
     name: generateName(),
     scale,
     theme,
-    circlesEnabled: useCircles,
-    slidesEnabled: !useCircles,
+    entityType,
+    // Circles
     numCircles,
-    numSlides,
-    dustCount,
     baseVelocity,
+    // Slides
+    numSlides,
     slideLength,
     slideSpacing,
     slideRadius,
+    slideRotation,
+    // Hangers
+    numHangers,
+    hangerLength,
+    hangerSpacing,
+    hangerRadius,
+    // Shared
+    dustCount,
     dustVelocity,
     roomSize,
     solidRipples,
     rippleExpand,
     rippleFade,
-    slideRotation,
+    gridEnabled,
   };
 }
 
@@ -153,7 +180,7 @@ export function generateScene() {
 
 export function applyScene(scene) {
   // 1. Write to settings
-  settings.circlesEnabled = scene.circlesEnabled;
+  settings.circlesEnabled = scene.entityType === 'circles';
   settings.numCircles     = scene.numCircles;
   settings.numSlides      = scene.numSlides;
   settings.dustCount      = scene.dustCount;
@@ -166,6 +193,11 @@ export function applyScene(scene) {
   settings.solidRipples   = scene.solidRipples;
   settings.rippleExpand   = scene.rippleExpand;
   settings.rippleFade     = scene.rippleFade;
+  settings.gridEnabled    = scene.gridEnabled;
+  settings.numHangers     = scene.numHangers;
+  settings.hangerLength   = scene.hangerLength;
+  settings.hangerSpacing  = scene.hangerSpacing;
+  settings.hangerRadius   = scene.hangerRadius;
 
   // 2. Scale
   setCurrentScale(scene.scale);
@@ -176,27 +208,34 @@ export function applyScene(scene) {
   // 4. Clear ripples from previous scene
   destroyAllRipples();
 
-  // 5. Recreate entities (scenes use either circles OR slides, not both)
-  if (scene.circlesEnabled) {
+  // 5. Recreate entities (only the active type; destroy the others)
+  if (scene.entityType === 'circles') {
     createCircles();
   } else {
     destroyAllCircles();
   }
-  if (scene.slidesEnabled) {
+
+  if (scene.entityType === 'slides') {
     createSlides(scene.slideRotation);
   } else {
-    // createSlides reads settings.numSlides; zero it to just clear, then restore
     const saved = settings.numSlides;
     settings.numSlides = 0;
     createSlides();
     settings.numSlides = saved;
   }
+
+  if (scene.entityType === 'hangers') {
+    createHangers();
+  } else {
+    destroyAllHangers();
+  }
+
   createDustParticles();
 
-  // 5. Audio
+  // 6. Audio
   updateRoomSize();
 
-  // 6. Sync admin panel
+  // 7. Sync admin panel
   syncAdminPanel(scene);
 }
 
@@ -225,6 +264,7 @@ function syncAdminPanel(scene) {
   setText('room-val', scene.roomSize + '%');
 
   // Ripples
+  setChecked('grid-toggle', scene.gridEnabled);
   setChecked('solid-ripples-toggle', scene.solidRipples);
   setVal('ripple-expand-slider', Math.round(scene.rippleExpand * 10));
   setText('ripple-expand-val', scene.rippleExpand.toFixed(1));
@@ -241,6 +281,20 @@ function syncAdminPanel(scene) {
   setVal('slide-radius-slider', scene.slideRadius);
   setText('slide-radius-val', scene.slideRadius);
 
+  // Hangers
+  setVal('hangers-slider', scene.numHangers);
+  setText('hangers-val', scene.numHangers);
+  setVal('hanger-length-slider', scene.hangerLength);
+  setText('hanger-length-val', scene.hangerLength + '%');
+  setVal('hanger-spacing-slider', scene.hangerSpacing);
+  setText('hanger-spacing-val', scene.hangerSpacing + '%');
+  setVal('hanger-radius-slider', scene.hangerRadius);
+  setText('hanger-radius-val', scene.hangerRadius);
+  setVal('hanger-gravity-slider', Math.round(settings.hangerGravity * 100));
+  setText('hanger-gravity-val', settings.hangerGravity.toFixed(2));
+  setVal('hanger-weight-slider', Math.round(settings.hangerTipWeight * 10));
+  setText('hanger-weight-val', settings.hangerTipWeight.toFixed(1));
+
   // Dust
   setVal('dust-count-slider', scene.dustCount);
   setText('dust-count-val', scene.dustCount);
@@ -248,7 +302,7 @@ function syncAdminPanel(scene) {
   setText('dust-vel-val', scene.dustVelocity.toFixed(2));
 
   // Circles
-  setChecked('circles-toggle', scene.circlesEnabled);
+  setChecked('circles-toggle', scene.entityType === 'circles');
   setVal('circles-slider', scene.numCircles);
   setText('circles-val', scene.numCircles);
   setVal('velocity-slider', Math.round(scene.baseVelocity * 100));

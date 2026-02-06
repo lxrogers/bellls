@@ -1,6 +1,8 @@
 import { settings } from '../settings.js';
 import { getTheme } from '../themes.js';
-import { app, circles, ripples, dustParticles, slides, started } from './pixi-app.js';
+import { app, circles, ripples, dustParticles, slides, hangers, started } from './pixi-app.js';
+import { updateGust } from '../entities/Hanger.js';
+import { drawAllRipples } from '../entities/Ripple.js';
 import * as camera from './camera.js';
 import { updateFlowTime } from '../utils/flow-field.js';
 
@@ -57,6 +59,11 @@ export function physicsLoop() {
     for (const slide of slides) {
       dust.checkSlideCircleCollision(slide);
     }
+    // Check hanger tip interactions (reuse slide circle methods)
+    for (const hanger of hangers) {
+      dust.checkHangerFlow(hanger);
+      dust.checkHangerCollision(hanger);
+    }
     dust.update();
   }
 
@@ -64,7 +71,20 @@ export function physicsLoop() {
   for (const slide of slides) {
     slide.update();
   }
-  
+
+  // Update gust and hangers (gust only relevant for hanger scenes)
+  if (hangers.length > 0) updateGust();
+  for (const hanger of hangers) {
+    hanger.update();
+  }
+
+  // Hanger tip collisions
+  for (let i = 0; i < hangers.length; i++) {
+    for (let j = i + 1; j < hangers.length; j++) {
+      hangers[i].checkCollision(hangers[j]);
+    }
+  }
+
   // Update slide rotation animation
   if (typeof window.updateSlideRotation === 'function') {
     window.updateSlideRotation();
@@ -73,7 +93,6 @@ export function physicsLoop() {
   // Remove dead ripples
   for (let i = ripples.length - 1; i >= 0; i--) {
     if (ripples[i].isDead()) {
-      ripples[i].destroy();
       ripples.splice(i, 1);
     }
   }
@@ -182,10 +201,8 @@ export function gameLoop() {
   oob.drawRect(-camera.cameraX, -camera.cameraY + h, w, pad);
   oob.endFill();
 
-  // Draw ripples
-  for (const ripple of ripples) {
-    ripple.draw();
-  }
+  // Draw all ripples in one batch
+  drawAllRipples();
 
   // Draw dust particles
   for (const dust of dustParticles) {
@@ -202,6 +219,12 @@ export function gameLoop() {
     slide.draw();
   }
 
+  // Draw hangers
+  for (const hanger of hangers) {
+    hanger.draw();
+  }
+
   // FPS display
   document.getElementById('fps-display').textContent = Math.round(app.ticker.FPS) + ' fps';
+  document.getElementById('ripple-count').textContent = ripples.length + ' ripples';
 }

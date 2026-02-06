@@ -1,7 +1,7 @@
 import { app, setStarted, initPixi } from './engine/pixi-app.js';
 import { gameLoop, physicsLoop } from './engine/game-loop.js';
 import { initAudio, updateVolume } from './audio/index.js';
-import { rotateSlides, updateRotationAnimation } from './entities/Slide.js';
+import { updateRotationAnimation } from './entities/Slide.js';
 import { setupAdminPanel } from './ui/admin-panel.js';
 import { settings } from './settings.js';
 import { applyTheme } from './themes.js';
@@ -22,11 +22,10 @@ function startExperience() {
 
   document.getElementById('start-overlay').style.display = 'none';
   document.getElementById('settings-btn').style.display = 'flex';
-  document.getElementById('rotate-btn').style.display = 'flex';
   document.getElementById('play-bar').classList.add('visible');
 
   initAudio();
-  const scene = generateScene();
+  const scene = generateScene('hangers');
   applyScene(scene);
   document.getElementById('scene-name').textContent = scene.name;
 
@@ -41,9 +40,6 @@ function startExperience() {
     nameEl.offsetHeight; // force reflow
     nameEl.style.animation = '';
   });
-
-  // Setup rotate button
-  document.getElementById('rotate-btn').addEventListener('click', rotateSlides);
 
   // Physics runs on setInterval (not throttled in background)
   physicsInterval = setInterval(physicsLoop, 1000 / 60);
@@ -122,7 +118,6 @@ async function init() {
   setupSettingsToggle();
 
   document.getElementById('start-overlay').addEventListener('click', startExperience);
-  document.addEventListener('keydown', startExperience, { once: true });
 }
 
 if (document.readyState === 'loading') {

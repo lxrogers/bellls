@@ -9,12 +9,14 @@ export let circleContainer = null;
 export let rippleContainer = null;
 export let dustContainer = null;
 export let slideContainer = null;
+export let hangerContainer = null;
 
 // Shared entity arrays
 export const circles = [];
 export const ripples = [];
 export const dustParticles = [];
 export const slides = [];
+export const hangers = [];
 
 // Application state
 export let started = false;
@@ -51,6 +53,7 @@ export async function initPixi() {
   dustContainer = new PIXI.Container();
   circleContainer = new PIXI.Container();
   slideContainer = new PIXI.Container();
+  hangerContainer = new PIXI.Container();
   const boundsOverlay = new PIXI.Container();
 
   // Grid pattern (for follow mode)
@@ -72,6 +75,7 @@ export async function initPixi() {
   app.stage.addChild(dustContainer);
   app.stage.addChild(circleContainer);
   app.stage.addChild(slideContainer);
+  app.stage.addChild(hangerContainer);
   app.stage.addChild(boundsOverlay);
 
   // Handle resize

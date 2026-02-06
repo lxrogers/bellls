@@ -5,6 +5,7 @@ import { app, circles } from '../engine/pixi-app.js';
 import { createCircles, destroyAllCircles } from '../entities/Circle.js';
 import { createDustParticles } from '../entities/DustParticle.js';
 import { createSlides } from '../entities/Slide.js';
+import { createHangers, gust, triggerGust } from '../entities/Hanger.js';
 
 export function setupAdminPanel() {
   document.getElementById('circles-toggle').addEventListener('change', (e) => {
@@ -125,6 +126,56 @@ export function setupAdminPanel() {
     createSlides();
   });
 
+  document.getElementById('hangers-slider').addEventListener('input', (e) => {
+    settings.numHangers = parseInt(e.target.value);
+    document.getElementById('hangers-val').textContent = settings.numHangers;
+    createHangers();
+  });
+
+  document.getElementById('hanger-length-slider').addEventListener('input', (e) => {
+    settings.hangerLength = parseInt(e.target.value);
+    document.getElementById('hanger-length-val').textContent = settings.hangerLength + '%';
+    createHangers();
+  });
+
+  document.getElementById('hanger-spacing-slider').addEventListener('input', (e) => {
+    settings.hangerSpacing = parseInt(e.target.value);
+    document.getElementById('hanger-spacing-val').textContent = settings.hangerSpacing + '%';
+    createHangers();
+  });
+
+  document.getElementById('hanger-radius-slider').addEventListener('input', (e) => {
+    settings.hangerRadius = parseInt(e.target.value);
+    document.getElementById('hanger-radius-val').textContent = settings.hangerRadius;
+    createHangers();
+  });
+
+  document.getElementById('hanger-gravity-slider').addEventListener('input', (e) => {
+    settings.hangerGravity = parseInt(e.target.value) / 100;
+    document.getElementById('hanger-gravity-val').textContent = settings.hangerGravity.toFixed(2);
+  });
+
+  document.getElementById('hanger-weight-slider').addEventListener('input', (e) => {
+    settings.hangerTipWeight = parseInt(e.target.value) / 10;
+    document.getElementById('hanger-weight-val').textContent = settings.hangerTipWeight.toFixed(1);
+    createHangers();
+  });
+
+  document.getElementById('hanger-damping-slider').addEventListener('input', (e) => {
+    settings.hangerDamping = parseInt(e.target.value) / 1000;
+    document.getElementById('hanger-damping-val').textContent = settings.hangerDamping.toFixed(3);
+  });
+
+  document.getElementById('hanger-bounce-slider').addEventListener('input', (e) => {
+    settings.hangerBounce = parseInt(e.target.value) / 100;
+    document.getElementById('hanger-bounce-val').textContent = settings.hangerBounce.toFixed(2);
+  });
+
+  document.getElementById('hanger-impact-slider').addEventListener('input', (e) => {
+    settings.hangerMinImpact = parseInt(e.target.value) / 100;
+    document.getElementById('hanger-impact-val').textContent = settings.hangerMinImpact.toFixed(2);
+  });
+
   document.getElementById('grid-toggle').addEventListener('change', (e) => {
     settings.gridEnabled = e.target.checked;
   });
@@ -147,4 +198,75 @@ export function setupAdminPanel() {
     settings.dustFieldScale = parseInt(e.target.value) / 1000;
     document.getElementById('field-scale-val').textContent = settings.dustFieldScale.toFixed(3);
   });
+
+  // --- Gust controls ---
+
+  // Magnitude slider (1-200 → 0.001-0.200)
+  document.getElementById('gust-mag-slider').addEventListener('input', (e) => {
+    gust.magnitude = parseInt(e.target.value) / 1000;
+    document.getElementById('gust-mag-val').textContent = gust.magnitude.toFixed(3);
+  });
+
+  // Duration slider
+  document.getElementById('gust-dur-slider').addEventListener('input', (e) => {
+    gust.duration = parseInt(e.target.value);
+    document.getElementById('gust-dur-val').textContent = (gust.duration / 60).toFixed(1) + 's';
+  });
+
+  // Gust button
+  document.getElementById('gust-btn').addEventListener('click', triggerGust);
+
+  // Direction dial (canvas)
+  const dial = document.getElementById('gust-dial');
+  const dialCtx = dial.getContext('2d');
+
+  function drawDial() {
+    const cx = dial.width / 2;
+    const cy = dial.height / 2;
+    const r = cx - 4;
+
+    dialCtx.clearRect(0, 0, dial.width, dial.height);
+
+    // Outer ring
+    dialCtx.beginPath();
+    dialCtx.arc(cx, cy, r, 0, Math.PI * 2);
+    dialCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+    dialCtx.lineWidth = 1.5;
+    dialCtx.stroke();
+
+    // Direction line
+    const endX = cx + Math.cos(gust.direction) * r * 0.8;
+    const endY = cy + Math.sin(gust.direction) * r * 0.8;
+    dialCtx.beginPath();
+    dialCtx.moveTo(cx, cy);
+    dialCtx.lineTo(endX, endY);
+    dialCtx.strokeStyle = '#8a8a9a';
+    dialCtx.lineWidth = 2;
+    dialCtx.stroke();
+
+    // Tip dot
+    dialCtx.beginPath();
+    dialCtx.arc(endX, endY, 3, 0, Math.PI * 2);
+    dialCtx.fillStyle = '#b0aaa0';
+    dialCtx.fill();
+  }
+
+  function setDialAngle(e) {
+    const rect = dial.getBoundingClientRect();
+    const x = e.clientX - rect.left - dial.width / 2;
+    const y = e.clientY - rect.top - dial.height / 2;
+    gust.direction = Math.atan2(y, x);
+    drawDial();
+  }
+
+  let draggingDial = false;
+  dial.addEventListener('mousedown', (e) => { draggingDial = true; setDialAngle(e); });
+  document.addEventListener('mousemove', (e) => { if (draggingDial) setDialAngle(e); });
+  document.addEventListener('mouseup', () => { draggingDial = false; });
+  dial.addEventListener('touchstart', (e) => { draggingDial = true; setDialAngle(e.touches[0]); e.preventDefault(); });
+  document.addEventListener('touchmove', (e) => { if (draggingDial) setDialAngle(e.touches[0]); });
+  document.addEventListener('touchend', () => { draggingDial = false; });
+
+  // Initial draw
+  drawDial();
 }

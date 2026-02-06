@@ -26,7 +26,7 @@ export class Slide {
     this.circleRadius = settings.slideRadius * getScreenScale();
     
     // Circle position along the line (0 = start, 1 = end)
-    this.circleT = Math.random();
+    this.circleT = Math.random() * 0.7; // Spawn in upper 70% of the line
     this.circleX = x;
     this.circleY = y + this.circleT * length;
     this.circleVT = 0; // Velocity along line (in t units)
@@ -114,7 +114,7 @@ export class Slide {
     this.graphics.clear();
     
     // Draw the line
-    this.graphics.lineStyle(2, 0xcccccc, 0.5);
+    this.graphics.lineStyle(1.5, 0xcccccc, 0.5);
     this.graphics.moveTo(this.x, this.y);
     this.graphics.lineTo(this.endX, this.endY);
     
@@ -142,14 +142,14 @@ export function createSlides(initialRotationDegrees = 0) {
   
   // Add new slides, equally spaced horizontally, closer to center
   const centerX = app.screen.width / 2;
-  const centerY = app.screen.height / 2;
+  const pivotY = app.screen.height / 2 - 50; // Rotation pivot accounts for vertical offset
   const totalWidth = app.screen.width * (settings.slideSpacing / 100);
   const spacing = totalWidth / (settings.numSlides + 1);
   const startX = centerX - totalWidth / 2;
-  
+
   // Slide length from settings
   const length = app.screen.height * (settings.slideLength / 100);
-  const startY = centerY - length / 2 - 50; // Center vertically, offset up 50px
+  const startY = pivotY - length / 2; // Center vertically around pivot
   
   // Get scale notes for assigning to slides
   const scaleNotes = scales[currentScale].notes;
@@ -167,8 +167,8 @@ export function createSlides(initialRotationDegrees = 0) {
     
     // Apply initial rotation if specified
     if (initialRotationDegrees !== 0) {
-      const newStart = rotatePoint(slide.x, slide.y, centerX, centerY, angleRadians);
-      const newEnd = rotatePoint(slide.endX, slide.endY, centerX, centerY, angleRadians);
+      const newStart = rotatePoint(slide.x, slide.y, centerX, pivotY, angleRadians);
+      const newEnd = rotatePoint(slide.endX, slide.endY, centerX, pivotY, angleRadians);
       slide.x = newStart.x;
       slide.y = newStart.y;
       slide.endX = newEnd.x;
@@ -188,16 +188,46 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-// Start rotation animation (random multiple of 30 degrees between 30-180)
-export function rotateSlides() {
+// Check if half or more circles are at rest at the bottom, trigger auto-rotation
+function checkAutoRotation() {
+  if (rotationAnimation) return;
+  if (slides.length === 0) return;
+
+  let atRest = 0;
+  for (const slide of slides) {
+    const lineLength = Math.sqrt(
+      (slide.endX - slide.x) ** 2 + (slide.endY - slide.y) ** 2
+    );
+    const bottomT = 1 - slide.circleRadius / lineLength;
+    const nearBottom = slide.circleT >= bottomT - 0.02;
+    const slowEnough = Math.abs(slide.circleVT) < 0.001;
+    if (nearBottom && slowEnough) atRest++;
+  }
+
+  if (atRest >= Math.ceil(slides.length / 2)) {
+    rotateSlides(true);
+  }
+}
+
+// Start rotation animation
+export function rotateSlides(auto = false) {
   if (rotationAnimation) return; // Don't start if already animating
-  
+
   const centerX = app.screen.width / 2;
-  const centerY = app.screen.height / 2;
-  // Random multiple of 30 between 30 and 180 (1-6 * 30)
-  const multiplier = Math.floor(Math.random() * 6) + 1;
-  const rotationAmount = multiplier * (Math.PI / 6); // 30-180 degrees
-  const duration = multiplier * 500; // 500ms per 30 degrees
+  const centerY = app.screen.height / 2 - 50; // Match the -50px vertical offset from createSlides
+
+  let rotationAmount, duration;
+  if (auto) {
+    // Auto-rotation: 90-180 degrees
+    const degrees = 90 + Math.floor(Math.random() * 4) * 30; // 90, 120, 150, or 180
+    rotationAmount = degrees * (Math.PI / 180);
+    duration = (degrees / 30) * 1500;
+  } else {
+    // Manual: random multiple of 30 between 30-180
+    const multiplier = Math.floor(Math.random() * 6) + 1;
+    rotationAmount = multiplier * (Math.PI / 6);
+    duration = multiplier * 1500;
+  }
   const startTime = performance.now();
   
   // Store initial positions for each slide (both line endpoints and circle)
@@ -244,7 +274,10 @@ function rotatePoint(x, y, centerX, centerY, angle) {
 
 // Update rotation animation (call this from game loop)
 export function updateRotationAnimation() {
-  if (!rotationAnimation) return;
+  if (!rotationAnimation) {
+    checkAutoRotation();
+    return;
+  }
   
   const elapsed = performance.now() - rotationAnimation.startTime;
   const progress = Math.min(elapsed / rotationAnimation.duration, 1);

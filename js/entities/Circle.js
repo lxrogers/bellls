@@ -60,7 +60,7 @@ export class Circle {
     // Ripple ring passed through center this frame
     if (dist >= ripple.prevRadius && dist < ripple.radius) {
       // Give upward impulse, scaled by ripple opacity (newer ripples = stronger)
-      const impulse = ripple.opacity * 0.03;
+      const impulse = ripple.opacity * 0.005;
       this.vz += impulse;
     }
   }
