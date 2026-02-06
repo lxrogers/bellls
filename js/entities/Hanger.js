@@ -295,9 +295,36 @@ export class Hanger {
   }
 }
 
+// --- Length curve functions ---
+
+const lengthCurves = {
+  'flat':        (i, n) => 0,
+  'linear-up':   (i, n) => i - (n - 1) / 2,
+  'linear-down': (i, n) => (n - 1) / 2 - i,
+  'arc-up':      (i, n) => { const t = i / (n - 1); return (2 * t - 1) ** 2 - 0.5; },
+  'arc-down':    (i, n) => { const t = i / (n - 1); return 0.5 - (2 * t - 1) ** 2; },
+  'sine':        (i, n) => Math.sin(2 * Math.PI * i / (n - 1)),
+};
+
+function computeLengthOffsets(curveType, n, circleRadius) {
+  const curveFn = lengthCurves[curveType] || lengthCurves['flat'];
+  if (curveType === 'flat' || n <= 1) return new Array(n).fill(0);
+
+  const raw = Array.from({ length: n }, (_, i) => curveFn(i, n));
+  // Max allowed delta between adjacent hangers: 10% of circle diameter
+  const maxStepPx = 0.1 * 2 * circleRadius;
+  // Find the steepest adjacent step in the raw curve
+  let maxAdjacentDelta = 0;
+  for (let i = 1; i < raw.length; i++) {
+    maxAdjacentDelta = Math.max(maxAdjacentDelta, Math.abs(raw[i] - raw[i - 1]));
+  }
+  const scaleFactor = maxAdjacentDelta > 0 ? maxStepPx / maxAdjacentDelta : 0;
+  return raw.map(v => v * scaleFactor);
+}
+
 // --- Factory functions ---
 
-export function createHangers() {
+export function createHangers(curveType = 'flat') {
   while (hangers.length > 0) {
     const h = hangers.pop();
     h.destroy();
@@ -313,13 +340,15 @@ export function createHangers() {
 
   const ropeLength = app.screen.height * (Math.max(settings.hangerLength, 60) / 100);
   const anchorY = app.screen.height * 0.08; // Hang from near top
+  const circleRadius = (settings.hangerRadius || 12) * scale;
+  const offsets = computeLengthOffsets(curveType, settings.numHangers, circleRadius);
 
   const scaleNotes = scales[currentScale].notes;
 
   for (let i = 0; i < settings.numHangers; i++) {
     const x = startX + spacing * (i + 1);
     const noteIndex = Math.floor((i / Math.max(settings.numHangers - 1, 1)) * (scaleNotes.length - 1));
-    const hanger = new Hanger(x, anchorY, ropeLength, noteIndex, i);
+    const hanger = new Hanger(x, anchorY, ropeLength + offsets[i], noteIndex, i);
     hangers.push(hanger);
   }
 }

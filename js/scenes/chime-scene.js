@@ -150,6 +150,16 @@ export function generateScene(forceEntityType = null) {
   const slideRotation = pick(slideRotationOptions);
   const gridEnabled = Math.random() < 0.3;
 
+  // Hanger length curve: flat is rare, variation is the norm
+  const hangerCurve = pick([
+    'flat',
+    'linear-up', 'linear-up',
+    'linear-down', 'linear-down',
+    'arc-up', 'arc-up',
+    'arc-down', 'arc-down',
+    'sine', 'sine',
+  ]);
+
   return {
     name: generateName(),
     scale,
@@ -169,6 +179,7 @@ export function generateScene(forceEntityType = null) {
     hangerLength,
     hangerSpacing,
     hangerRadius,
+    hangerCurve,
     // Shared
     dustCount,
     dustVelocity,
@@ -229,7 +240,7 @@ export function applyScene(scene) {
   }
 
   if (scene.entityType === 'hangers') {
-    createHangers();
+    createHangers(scene.hangerCurve);
   } else {
     destroyAllHangers();
   }
