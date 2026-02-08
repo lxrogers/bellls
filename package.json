@@ -1,0 +1,32 @@
+{
+  "name": "bellls",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:libs": "mkdir -p lib && cp node_modules/tone/build/Tone.js lib/tone.js && cp node_modules/pixi.js/dist/pixi.min.js lib/pixi.min.js",
+    "build": "npm run build:libs && mkdir -p dist && rsync -a --exclude node_modules --exclude ios --exclude dist --exclude .git --exclude 'VCSL-*' --exclude 'kalimba-*' --exclude palettes . dist/",
+    "postinstall": "npm run build:libs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxrogers/bellls.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lxrogers/bellls/issues"
+  },
+  "homepage": "https://github.com/lxrogers/bellls#readme",
+  "dependencies": {
+    "@capacitor/core": "^8.0.2",
+    "@capacitor/ios": "^8.0.2",
+    "pixi.js": "^7.4.0",
+    "tone": "^15.1.22"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.2"
+  }
+}
