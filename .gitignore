@@ -17,3 +17,11 @@ ripple-prototype.html
 
 # Logs
 *.log
+
+# Dependencies & build
+node_modules/
+lib/
+dist/
+
+# iOS
+ios/

@@ -41,7 +41,8 @@ function startExperience() {
     nameEl.style.animation = '';
   });
 
-  // Physics runs on setInterval (not throttled in background)
+  // Physics runs on setInterval (iOS throttles to ~1/sec in background,
+  // but the MediaStream bridge keeps audio rendering alive)
   physicsInterval = setInterval(physicsLoop, 1000 / 60);
 
   // Rendering runs on requestAnimationFrame (pauses in background, that's fine)

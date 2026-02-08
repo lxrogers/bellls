@@ -184,6 +184,11 @@ export function setupAdminPanel() {
     settings.solidRipples = e.target.checked;
   });
 
+  document.getElementById('ripple-opacity-slider').addEventListener('input', (e) => {
+    settings.solidRippleOpacity = parseInt(e.target.value) / 100;
+    document.getElementById('ripple-opacity-val').textContent = e.target.value + '%';
+  });
+
   document.getElementById('dust-decay-slider').addEventListener('input', (e) => {
     settings.dustNudgeDecay = parseInt(e.target.value) / 100;
     document.getElementById('dust-decay-val').textContent = settings.dustNudgeDecay.toFixed(2);

@@ -168,6 +168,13 @@ export const themes = {
 
 export let currentTheme = 'dark';
 
+function isLightBackground(bgColor) {
+  const r = (bgColor >> 16) & 0xff;
+  const g = (bgColor >> 8) & 0xff;
+  const b = bgColor & 0xff;
+  return (r + g + b) / 3 > 128;
+}
+
 export function applyTheme(themeName, app, circles) {
   currentTheme = themeName;
   const theme = themes[themeName];
@@ -175,6 +182,11 @@ export function applyTheme(themeName, app, circles) {
   // Update background
   if (app && app.renderer) {
     app.renderer.background.color = theme.background;
+  }
+
+  // Paper texture only on light backgrounds
+  if (app && app._paperSprite) {
+    app._paperSprite.visible = isLightBackground(theme.background);
   }
 
   // Update circle colors

@@ -43,6 +43,26 @@ export async function initPixi() {
   });
   document.getElementById('app').appendChild(app.view);
 
+  // Paper texture background (tiled)
+  try {
+    const paperTexture = PIXI.Texture.from('paper-texture.png');
+    paperTexture.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
+    const paperSprite = new PIXI.TilingSprite(
+      paperTexture,
+      window.innerWidth,
+      window.innerHeight
+    );
+    paperSprite.alpha = 0.3;
+    // Only show on light backgrounds
+    const bg = getTheme().background;
+    const avg = (((bg >> 16) & 0xff) + ((bg >> 8) & 0xff) + (bg & 0xff)) / 3;
+    paperSprite.visible = avg > 128;
+    app.stage.addChild(paperSprite);
+    app._paperSprite = paperSprite;
+  } catch (e) {
+    console.warn('[pixi] paper texture not found, skipping');
+  }
+
   // Create containers for layering
   const gridContainer = new PIXI.Container();
   const blurFilter = new PIXI.filters.BlurFilter();
@@ -81,6 +101,10 @@ export async function initPixi() {
   // Handle resize
   window.addEventListener('resize', () => {
     app.renderer.resize(window.innerWidth, window.innerHeight);
+    if (app._paperSprite) {
+      app._paperSprite.width = window.innerWidth;
+      app._paperSprite.height = window.innerHeight;
+    }
   });
 
   // Handle click for follow mode

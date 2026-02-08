@@ -32,5 +32,6 @@ export const settings = {
   hangerBounce: 0.7,   // Collision bounce factor (0 = no bounce, 1 = full)
   hangerMinImpact: 0.1, // Min impact speed to trigger sound
   gridEnabled: false,  // Toggle for background grid
-  solidRipples: true   // Draw ripples as filled circles
+  solidRipples: true,  // Draw ripples as filled circles
+  solidRippleOpacity: 0.7  // Max opacity for solid ripples (0-1)
 };

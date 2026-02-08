@@ -82,6 +82,7 @@ export function generateScene(forceEntityType = null) {
   let numCircles, baseVelocity;
   let numHangers, hangerLength, hangerSpacing, hangerRadius;
   let dustCount, dustVelocity, roomSize, rippleExpand, rippleFade, solidRipples;
+  const solidRippleOpacity = pick([0.15, 0.5, 0.75, 1.0]);
 
   switch (density) {
     case 'sparse':
@@ -185,6 +186,7 @@ export function generateScene(forceEntityType = null) {
     dustVelocity,
     roomSize,
     solidRipples,
+    solidRippleOpacity,
     rippleExpand,
     rippleFade,
     gridEnabled,
@@ -206,6 +208,7 @@ export function applyScene(scene) {
   settings.dustVelocity   = scene.dustVelocity;
   settings.roomSize       = scene.roomSize;
   settings.solidRipples   = scene.solidRipples;
+  settings.solidRippleOpacity = scene.solidRippleOpacity;
   settings.rippleExpand   = scene.rippleExpand;
   settings.rippleFade     = scene.rippleFade;
   settings.gridEnabled    = scene.gridEnabled;
@@ -281,6 +284,8 @@ function syncAdminPanel(scene) {
   // Ripples
   setChecked('grid-toggle', scene.gridEnabled);
   setChecked('solid-ripples-toggle', scene.solidRipples);
+  setVal('ripple-opacity-slider', Math.round(scene.solidRippleOpacity * 100));
+  setText('ripple-opacity-val', Math.round(scene.solidRippleOpacity * 100) + '%');
   setVal('ripple-expand-slider', Math.round(scene.rippleExpand * 10));
   setText('ripple-expand-val', scene.rippleExpand.toFixed(1));
   setVal('ripple-fade-slider', Math.round(scene.rippleFade * 10));

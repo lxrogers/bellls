@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>chiiimes — process samples</title>
+  <style>
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      max-width: 640px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f5f0e8;
+      color: #3a3632;
+    }
+    h1 { font-weight: 400; letter-spacing: 0.05em; }
+    p.desc { color: #5a554d; font-size: 0.9rem; line-height: 1.6; }
+    button {
+      padding: 12px 28px;
+      font-family: inherit;
+      font-size: 1rem;
+      background: rgba(0,0,0,0.06);
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px;
+      cursor: pointer;
+      color: #3a3632;
+      transition: background 0.2s;
+    }
+    button:hover { background: rgba(0,0,0,0.1); }
+    button:disabled { opacity: 0.4; cursor: default; }
+    #log {
+      white-space: pre-wrap;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 20px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+    #downloads { margin-top: 16px; }
+    #downloads a {
+      display: block;
+      padding: 6px 0;
+      color: #5a554d;
+      font-size: 0.9rem;
+    }
+    #downloads a:hover { color: #3a3632; }
+  </style>
+</head>
+<body>
+  <h1>process samples</h1>
+  <p class="desc">
+    Applies the Tone.js reverb chain (delay → reverb convolver → room convolver)
+    to each dry vibraphone sample and saves as WAV. No compressor/limiter — those go on the native bus.
+    Serve this page from the project root.
+  </p>
+  <button id="process-btn" onclick="processAll()">Process All Samples</button>
+  <div id="log"></div>
+  <div id="downloads"></div>
+
+  <script src="lib/tone.js"></script>
+  <script>
+    const SAMPLES = {
+      'F2': 'Vibes_soft_F2_v1_rr1_Main.m4a',
+      'A2': 'Vibes_soft_A2_v1_rr1_Main.m4a',
+      'C3': 'Vibes_soft_C3_v1_rr2_Main.m4a',
+      'E3': 'Vibes_soft_E3_v1_rr2_Main.m4a',
+      'G3': 'Vibes_soft_G3_v1_rr1_Main.m4a',
+      'B3': 'Vibes_soft_B3_v1_rr1_Main.m4a',
+      'D4': 'Vibes_soft_D4_v1_rr1_Main.m4a',
+      'F4': 'Vibes_soft_F4_v1_rr1_Main.m4a',
+      'A4': 'Vibes_soft_A4_v1_rr1_Main.m4a',
+      'C5': 'Vibes_soft_C5_v1_rr1_Main.m4a',
+      'E5': 'Vibes_soft_E5_v1_rr1_Main.m4a',
+    };
+
+    const SAMPLE_RATE = 44100;
+    const EFFECTS_TAIL = 12;
+    const MIN_DURATION = 18;
+
+    const logEl = document.getElementById('log');
+    function log(msg) {
+      logEl.textContent += msg + '\n';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Generate an impulse response: stereo white noise with exponential decay
+    function generateIR(durationSec, preDelaySec) {
+      const irLength = Math.floor(durationSec * SAMPLE_RATE);
+      const preDelaySamples = Math.floor((preDelaySec || 0) * SAMPLE_RATE);
+      const totalLength = preDelaySamples + irLength;
+      const channels = [new Float32Array(totalLength), new Float32Array(totalLength)];
+      for (let ch = 0; ch < 2; ch++) {
+        for (let i = 0; i < irLength; i++) {
+          channels[ch][preDelaySamples + i] =
+            (Math.random() * 2 - 1) * Math.exp(-3 * i / irLength);
+        }
+      }
+      return channels;
+    }
+
+    function channelsToAudioBuffer(channels) {
+      const buf = new AudioBuffer({
+        numberOfChannels: channels.length,
+        length: channels[0].length,
+        sampleRate: SAMPLE_RATE,
+      });
+      for (let ch = 0; ch < channels.length; ch++) {
+        buf.copyToChannel(channels[ch], ch);
+      }
+      return buf;
+    }
+
+    async function loadSample(filename) {
+      const resp = await fetch('samples/' + filename);
+      const arrayBuf = await resp.arrayBuffer();
+      const ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
+      const decoded = await ctx.decodeAudioData(arrayBuf);
+      ctx.close();
+      return decoded;
+    }
+
+    async function processSample(note, sampleAudioBuffer, reverbIR, roomIR) {
+      const sampleDuration = sampleAudioBuffer.duration;
+      const renderDuration = Math.max(MIN_DURATION, sampleDuration + EFFECTS_TAIL);
+
+      const rendered = await Tone.Offline(async ({ transport }) => {
+        transport.bpm.value = 120;
+
+        // Effects chain: player → panner → delay → reverbConv → roomConv → out
+        // (no compressor/limiter — those belong on the native bus mix, not per-sample)
+        const roomConvolver = new Tone.Convolver({ wet: 0.45 }).toDestination();
+        roomConvolver.buffer = roomIR;
+
+        const reverbConvolver = new Tone.Convolver({ wet: 0.45 }).connect(roomConvolver);
+        reverbConvolver.buffer = reverbIR;
+
+        const delay = new Tone.FeedbackDelay({
+          delayTime: '8n.', feedback: 0.25, wet: 0.15,
+        }).connect(reverbConvolver);
+
+        const panner = new Tone.Panner(0).connect(delay);
+        const sampler = new Tone.Sampler({ release: 4 }).connect(panner);
+
+        // Add the sample buffer to the sampler
+        const toneBuf = new Tone.ToneAudioBuffer(sampleAudioBuffer);
+        sampler.add(note, toneBuf);
+
+        // Trigger at t=0, full velocity, let full sample play + release
+        sampler.triggerAttackRelease(note, sampleDuration, 0, 1.0);
+      }, renderDuration, 2, SAMPLE_RATE);
+
+      return rendered;
+    }
+
+    function encodeWav(audioBuffer) {
+      const numChannels = audioBuffer.numberOfChannels;
+      const sampleRate = audioBuffer.sampleRate;
+      const bitDepth = 32;
+      const format = 3; // IEEE float
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      const dataLength = audioBuffer.length * blockAlign;
+      const buffer = new ArrayBuffer(44 + dataLength);
+      const view = new DataView(buffer);
+
+      function writeStr(offset, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      }
+
+      writeStr(0, 'RIFF');
+      view.setUint32(4, 36 + dataLength, true);
+      writeStr(8, 'WAVE');
+      writeStr(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, format, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitDepth, true);
+      writeStr(36, 'data');
+      view.setUint32(40, dataLength, true);
+
+      const channels = [];
+      for (let ch = 0; ch < numChannels; ch++) {
+        channels.push(audioBuffer.getChannelData(ch));
+      }
+
+      let offset = 44;
+      for (let i = 0; i < audioBuffer.length; i++) {
+        for (let ch = 0; ch < numChannels; ch++) {
+          view.setFloat32(offset, channels[ch][i], true);
+          offset += 4;
+        }
+      }
+
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    function addDownloadLink(filename, blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.textContent = filename + ' (' + (blob.size / 1024 / 1024).toFixed(1) + ' MB)';
+      document.getElementById('downloads').appendChild(a);
+    }
+
+    async function processAll() {
+      const btn = document.getElementById('process-btn');
+      btn.disabled = true;
+
+      try {
+        await Tone.start();
+        log('Tone.js started');
+
+        log('Generating IR buffers...');
+        const reverbIRChannels = generateIR(6.5, 0.055);
+        const roomIRChannels = generateIR(4.0, 0);
+        const reverbIR = channelsToAudioBuffer(reverbIRChannels);
+        const roomIR = channelsToAudioBuffer(roomIRChannels);
+        log('  Reverb IR: ' + reverbIR.duration.toFixed(2) + 's');
+        log('  Room IR: ' + roomIR.duration.toFixed(2) + 's');
+
+        const entries = Object.entries(SAMPLES);
+        for (let idx = 0; idx < entries.length; idx++) {
+          const [note, filename] = entries[idx];
+          log('\n[' + (idx + 1) + '/' + entries.length + '] ' + note + ' — ' + filename);
+
+          const decoded = await loadSample(filename);
+          log('  Loaded: ' + decoded.duration.toFixed(2) + 's, ' + decoded.sampleRate + 'Hz');
+
+          const rendered = await processSample(note, decoded, reverbIR, roomIR);
+          const renderedBuf = rendered.get();
+          log('  Rendered: ' + renderedBuf.duration.toFixed(2) + 's');
+
+          const wavBlob = encodeWav(renderedBuf);
+          const wetName = filename.replace('.m4a', '_wet.wav');
+          addDownloadLink(wetName, wavBlob);
+          log('  Ready: ' + wetName);
+        }
+
+        log('\n--- All done! ---');
+        log('Download the WAVs, move them to samples/, then run:');
+        log('cd samples && for f in *_wet.wav; do afconvert "$f" "${f%.wav}.m4a" -d aac -f m4af -b 128000 && rm "$f"; done');
+      } catch (err) {
+        log('\nERROR: ' + err.message);
+        console.error(err);
+      }
+
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

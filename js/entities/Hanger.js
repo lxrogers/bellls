@@ -20,7 +20,7 @@ export const gust = {
 };
 
 let framesSinceLastNote = 0;
-let autoGustThreshold = 300 + Math.random() * 300; // 5-10 seconds
+let autoGustThreshold = 120 + Math.random() * 480; // 2-10 seconds
 
 export function notePlayed() {
   framesSinceLastNote = 0;
@@ -55,7 +55,7 @@ export function updateGust() {
     triggerGust();
     gust.autoMagnitude = 0.005 + Math.random() * 0.015; // 0.005 - 0.02
     framesSinceLastNote = 0;
-    autoGustThreshold = 300 + Math.random() * 300; // re-roll for next time
+    autoGustThreshold = 120 + Math.random() * 480; // re-roll: 2-10 seconds
   }
 
   if (!gust.active) return;

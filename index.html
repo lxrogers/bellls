@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>chiiimes</title>
-  <link rel="icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <style>
     * {
       margin: 0;
@@ -78,8 +80,8 @@
     /* Settings gear button */
     #settings-btn {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: calc(20px + env(safe-area-inset-top));
+      right: calc(20px + env(safe-area-inset-right));
       width: 44px;
       height: 44px;
       background: rgba(255, 255, 255, 0.25);
@@ -256,7 +258,7 @@
     /* Play bar */
     #play-bar {
       position: fixed;
-      bottom: 32px;
+      bottom: calc(32px + env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.55);
@@ -361,6 +363,8 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+
+
   </style>
 </head>
 <body>
@@ -428,6 +432,10 @@
         <input type="checkbox" id="solid-ripples-toggle" checked>
         Solid ripples
       </label>
+    </div>
+    <div class="control">
+      <label>ripple opacity <span class="value" id="ripple-opacity-val">70%</span></label>
+      <input type="range" id="ripple-opacity-slider" min="10" max="100" value="70">
     </div>
     <div class="control">
       <label>ripple expand <span class="value" id="ripple-expand-val">0.6</span></label>
@@ -686,8 +694,8 @@
     })();
   </script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"></script>
+  <script src="lib/tone.js"></script>
+  <script src="lib/pixi.min.js"></script>
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@ services:
   - type: web
     name: bellls
     env: static
-    buildCommand: ""
+    buildCommand: npm install && npm run build:libs
     staticPublishPath: .
     headers:
       - path: /*

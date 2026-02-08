@@ -31,10 +31,12 @@ export class Ripple {
     this.age++;
 
     if (settings.solidRipples && this.color !== null) {
-      // Solid ripples: stay opaque until maxRadius, then fade over ~2s (120 frames)
+      // Solid ripples: cap at configured opacity, then fade over ~2s (120 frames) past maxRadius
+      const maxOpacity = settings.solidRippleOpacity;
+      if (this.opacity > maxOpacity) this.opacity = maxOpacity;
       const maxRadius = 500;
       if (this.radius > maxRadius) {
-        this.opacity -= 1 / 120;
+        this.opacity -= maxOpacity / 120;
       }
     } else {
       this.opacity -= settings.rippleFade * 0.01;
